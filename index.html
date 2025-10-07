@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>イベント用POSレジ (最終調整版)</title>
+    <title>イベント用POSレジ (完成版)</title>
     <style>
         :root {
             --product-item-size: 250px;
-            --product-item-font-size: 18px; /* 文字サイズのデフォルト値を設定 */
+            --product-item-font-size: 18px;
         }
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Meiryo, sans-serif; height: 100dvh; overflow: hidden; background-color: #f4f7f6; }
         .container { display: flex; height: 100%; }
@@ -43,8 +43,7 @@
         .cart-footer { padding: 25px; border-top: 1px solid #eee; background-color: #fdfdfd; }
         .total-section { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 20px; }
         .total-section .label { font-size: 1.6em; color: #333; }
-        /* ★変更点: 合計金額をさらに特大表示 */
-        .total-section .amount { font-size: 3em; color: #e74c3c; }
+        .total-section .amount { font-size: 3em; color: #2c3e50; } /* ★変更点: 合計金額の色を黒系に */
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .action-buttons button { padding: 18px; border: none; border-radius: 8px; font-size: 1.2em; color: white; cursor: pointer; }
         #register-btn { background-color: #27ae60; }
@@ -71,10 +70,13 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 14px; border: 1px solid #ddd; text-align: left; font-size: 16px; }
         th { background-color: #ecf0f1; }
-        .action-btn { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; }
+        .action-btn { padding: 5px 10px; margin-right: 5px; cursor: pointer; border-width: 1px; border-style: solid; border-radius: 3px; color: white; transition: opacity 0.2s; }
+        .action-btn:hover { opacity: 0.8; }
+        /* ★変更点: ボタンの色分け */
+        .btn-edit { background-color: #3498db; border-color: #2980b9; }
+        .btn-delete { background-color: #e74c3c; border-color: #c0392b; }
         
         .form-section { background: #fff; padding: 25px; border-radius: 10px; margin-top: 25px; border: 1px solid #e0e0e0; }
-        .form-section h3 { margin-top: 0; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .form-grid input { font-size: 16px; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
 
@@ -85,17 +87,47 @@
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 5px; padding: 16px; position: fixed; z-index: 10; right: 30px; top: 30px; font-size: 17px; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
         #toast.show { visibility: visible; opacity: 1; }
 
+        /* ★★★変更点: スマートフォン用のレスポンシブ最終調整★★★ */
         @media (max-width: 800px) {
-            .container { flex-direction: column; height: auto; overflow-y: auto; }
             body, html { overflow: visible; }
-            .left-pane, .right-pane { flex-basis: auto; width: 100%; box-sizing: border-box; }
-            .left-pane { flex-direction: column; }
+            .container { flex-direction: column; height: 100dvh; } /* 縦積みにし、高さを再度dvhに */
+            .left-pane { flex-shrink: 0; } /* メニューバーが縮まないように */
+            .center-pane { flex-grow: 1; padding: 15px; }
+            .right-pane { flex-basis: auto; width: 100%; box-sizing: border-box; flex-shrink: 0; }
+            
+            /* メニューバーをスリム化 */
+            .left-pane { flex-direction: column; height: auto; padding: 8px 15px; }
+            .left-pane-header { padding-bottom: 8px; }
             #hamburger-btn { display: block; }
-            .left-pane ul { display: none; }
+            .left-pane ul { display: none; margin-top: 8px; }
             .left-pane.menu-open ul { display: block; }
-            .right-pane { display: none; }
-            .center-pane { padding: 15px; }
+
+            /* 商品リストを横スクロール化 */
+            .product-grid {
+                display: flex;
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 15px; /* スクロールバーのための余白 */
+                gap: 15px;
+            }
+            .product-item {
+                flex: 0 0 var(--product-item-size); /* 固定幅 */
+                width: var(--product-item-size);
+            }
+
+            /* カートの高さをスリム化し、フッターを固定 */
+            .right-pane {
+                display: none; /* 販売画面以外では非表示 */
+                max-height: 45%; /* カートの高さを画面の45%までに制限 */
+            }
             .container[data-view="販売操作"] .right-pane { display: flex; }
+            .cart-footer {
+                position: sticky; /* フッターを固定 */
+                bottom: 0;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
             .form-grid { grid-template-columns: 1fr; }
         }
     </style>
@@ -108,11 +140,7 @@
                 <button id="hamburger-btn">☰</button>
             </div>
             <ul id="main-menu">
-                <li class="active">販売操作</li>
-                <li>集計</li>
-                <li>レシート履歴</li>
-                <li>商品一覧設定</li>
-                <li>設定</li>
+                <li class="active">販売操作</li><li>集計</li><li>レシート履歴</li><li>商品一覧設定</li><li>設定</li>
             </ul>
         </nav>
         <main class="center-pane" id="center-pane"></main>
@@ -125,11 +153,7 @@
         let state = {
             products: [], cart: [], receipts: [], activeView: '販売操作',
             editMode: { active: false, receiptDate: null },
-            // ★変更点: デフォルト値を調整、文字サイズ設定を追加
-            settings: {
-                productItemSize: 250,
-                productItemFontSize: 18
-            }
+            settings: { productItemSize: 250, productItemFontSize: 18 } // ★変更点: デフォルト値を更新
         };
 
         function saveData() { localStorage.setItem('posData', JSON.stringify({ products: state.products, receipts: state.receipts, settings: state.settings })); }
@@ -140,17 +164,11 @@
                 state.products = data.products || getDefaultProducts();
                 state.receipts = data.receipts || [];
                 state.settings = data.settings || defaultSettings;
-                // 古い設定データにfontSizeがない場合を考慮
-                if (!state.settings.productItemFontSize) {
-                    state.settings.productItemFontSize = defaultSettings.productItemFontSize;
-                }
-            } else {
-                state.products = getDefaultProducts();
-            }
+                if (!state.settings.productItemFontSize) { state.settings.productItemFontSize = defaultSettings.productItemFontSize; }
+            } else { state.products = getDefaultProducts(); }
             applySettings();
         }
         function applySettings() {
-            // ★変更点: 文字サイズとボタンサイズを独立して適用
             document.documentElement.style.setProperty('--product-item-size', `${state.settings.productItemSize}px`);
             document.documentElement.style.setProperty('--product-item-font-size', `${state.settings.productItemFontSize}px`);
         }
@@ -186,50 +204,33 @@
         function renderProductsGrid() { const productGrid = centerPane.querySelector('.product-grid'); if (!productGrid) return; productGrid.innerHTML = ''; state.products.forEach(p => { const item = document.createElement('div'); item.className = 'product-item'; let priceHtml = p.discountAmount > 0 ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>` : `<div class="price">¥${p.price.toLocaleString()}</div>`; item.innerHTML = `<div class="name">${p.name}</div>${priceHtml}`; item.addEventListener('click', () => addProductToCart(p.id)); productGrid.appendChild(item); }); }
         function renderCart() { const cartItemsContainer = rightPane.querySelector('.cart-items'); if (!cartItemsContainer) return; cartItemsContainer.innerHTML = ''; let total = 0; const normalItems = state.cart.filter(item => findProductById(item.id) && findProductById(item.id).discountAmount === 0); const discountedItems = state.cart.filter(item => findProductById(item.id) && findProductById(item.id).discountAmount > 0); const createItemHtml = (cartItem) => { const product = findProductById(cartItem.id); if(!product) return { html: '', subtotal: 0 }; const finalPrice = product.price - product.discountAmount; const subtotal = finalPrice * cartItem.quantity; const priceHtml = product.discountAmount > 0 ? `<span class="original-price">¥${product.price.toLocaleString()}</span> ¥${finalPrice.toLocaleString()}` : `¥${product.price.toLocaleString()}`; const html = `<div class="cart-item"><div class="cart-item-info"><div class="name">${product.name}</div><div class="price">${cartItem.quantity} x ${priceHtml}</div></div><div class="cart-item-controls"><button class="decrease-btn" data-id="${cartItem.id}">-</button><span class="quantity">${cartItem.quantity}</span><button class="increase-btn" data-id="${cartItem.id}">+</button></div></div>`; return { html, subtotal }; }; normalItems.forEach(item => { const result = createItemHtml(item); cartItemsContainer.innerHTML += result.html; total += result.subtotal; }); if(discountedItems.length > 0) { cartItemsContainer.innerHTML += '<div class="cart-separator">割引商品</div>'; discountedItems.forEach(item => { const result = createItemHtml(item); cartItemsContainer.innerHTML += result.html; total += result.subtotal; }); } rightPane.querySelector('#total-amount').textContent = `¥${Math.floor(total).toLocaleString()}`; addCartButtonEvents(); }
         function renderSummaryView() { let totalRevenue = 0, totalCost = 0; const salesSummary = {}; state.receipts.forEach(receipt => { receipt.items.forEach(item => { const product = findProductById(item.id); if (!product) return; if (!salesSummary[item.id]) salesSummary[item.id] = { name: product.name, quantity: 0, revenue: 0 }; const revenue = (product.price - product.discountAmount) * item.quantity; salesSummary[item.id].quantity += item.quantity; salesSummary[item.id].revenue += revenue; totalRevenue += revenue; totalCost += product.cost * item.quantity; }); }); const tableRows = Object.values(salesSummary).map(s => `<tr><td>${s.name}</td><td>${s.quantity}</td><td>¥${Math.floor(s.revenue).toLocaleString()}</td></tr>`).join(''); centerPane.innerHTML = `<h1>集計</h1><div class="summary-cards-container"><div class="summary-card"><h3>総売上</h3><p>¥${Math.floor(totalRevenue).toLocaleString()}</p></div><div class="summary-card"><h3>総原価</h3><p>¥${Math.floor(totalCost).toLocaleString()}</p></div><div class="summary-card"><h3>総利益</h3><p class="profit">¥${Math.floor(totalRevenue - totalCost).toLocaleString()}</p></div></div><h2>商品別 売上一覧</h2><table><thead><tr><th>商品名</th><th>販売数</th><th>売上</th></tr></thead><tbody>${tableRows}</tbody></table>`;}
-        function renderReceiptsView() { const receiptListHtml = state.receipts.map((receipt) => { const itemsHtml = receipt.items.map(item => { const p = findProductById(item.id); return `<li>${p ? p.name : '削除済商品'} x ${item.quantity}</li>`; }).join(''); return `<div class="receipt-card"><div class="receipt-card-header"><h4>レシート #${receipt.id}</h4><span>${new Date(receipt.date).toLocaleString()}</span></div><p class="total">¥${receipt.total.toLocaleString()}</p><ul>${itemsHtml}</ul><div class="receipt-card-footer"><button class="action-btn" onclick="editReceipt('${receipt.date}')">編集</button><button class="action-btn" onclick="deleteReceipt('${receipt.date}')">削除</button></div></div>`; }).join(''); centerPane.innerHTML = `<h1>レシート履歴</h1><div class="receipt-grid">${receiptListHtml || '<p>まだ会計履歴はありません。</p>'}</div>`; }
-        function renderProductsSettingsView() { const productsHtml = state.products.map(p => `<tr><td>${p.name}</td><td>¥${p.price.toLocaleString()}</td><td>¥${p.cost.toLocaleString()}</td><td>¥${p.discountAmount.toLocaleString()}</td><td><button class="action-btn" onclick="editProduct(${p.id})">編集</button><button class="action-btn" onclick="deleteProduct(${p.id})">削除</button></td></tr>`).join(''); centerPane.innerHTML = `<h1>商品一覧設定</h1><table><thead><tr><th>名前</th><th>価格</th><th>原価</th><th>割引額</th><th>操作</th></tr></thead><tbody>${productsHtml}</tbody></table><div class="form-section"><h3 id="product-form-title">新規商品追加</h3><form id="product-form"><input type="hidden" id="product-id"><div class="form-grid"><input type="text" id="product-name" placeholder="商品名" required><input type="number" id="product-price" placeholder="価格" required><input type="number" id="product-cost" placeholder="原価" required><input type="number" id="product-discount-amount" placeholder="割引額 (なければ0)" required></div><button type="submit" style="width:100%; padding:15px; margin-top:15px; background:#2980b9; color:white; border:none; border-radius:8px; font-size:1.1em;">保存</button></form></div>`; document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit); }
-        
-        // ★変更点: 設定画面に文字サイズスライダーを追加
+        function renderReceiptsView() {
+            // ★変更点: ボタンに色分け用のクラスを追加
+            const receiptListHtml = state.receipts.map((receipt) => {
+                const itemsHtml = receipt.items.map(item => { const p = findProductById(item.id); return `<li>${p ? p.name : '削除済商品'} x ${item.quantity}</li>`; }).join('');
+                return `<div class="receipt-card"><div class="receipt-card-header"><h4>レシート #${receipt.id}</h4><span>${new Date(receipt.date).toLocaleString()}</span></div><p class="total">¥${receipt.total.toLocaleString()}</p><ul>${itemsHtml}</ul><div class="receipt-card-footer"><button class="action-btn btn-edit" onclick="editReceipt('${receipt.date}')">編集</button><button class="action-btn btn-delete" onclick="deleteReceipt('${receipt.date}')">削除</button></div></div>`;
+            }).join('');
+            centerPane.innerHTML = `<h1>レシート履歴</h1><div class="receipt-grid">${receiptListHtml || '<p>まだ会計履歴はありません。</p>'}</div>`;
+        }
+        function renderProductsSettingsView() {
+            // ★変更点: ボタンに色分け用のクラスを追加
+            const productsHtml = state.products.map(p => `<tr><td>${p.name}</td><td>¥${p.price.toLocaleString()}</td><td>¥${p.cost.toLocaleString()}</td><td>¥${p.discountAmount.toLocaleString()}</td><td><button class="action-btn btn-edit" onclick="editProduct(${p.id})">編集</button><button class="action-btn btn-delete" onclick="deleteProduct(${p.id})">削除</button></td></tr>`).join('');
+            centerPane.innerHTML = `<h1>商品一覧設定</h1><table><thead><tr><th>名前</th><th>価格</th><th>原価</th><th>割引額</th><th>操作</th></tr></thead><tbody>${productsHtml}</tbody></table><div class="form-section"><h3 id="product-form-title">新規商品追加</h3><form id="product-form"><input type="hidden" id="product-id"><div class="form-grid"><input type="text" id="product-name" placeholder="商品名" required><input type="number" id="product-price" placeholder="価格" required><input type="number" id="product-cost" placeholder="原価" required><input type="number" id="product-discount-amount" placeholder="割引額 (なければ0)" required></div><button type="submit" style="width:100%; padding:15px; margin-top:15px; background:#2980b9; color:white; border:none; border-radius:8px; font-size:1.1em;">保存</button></form></div>`;
+            document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit);
+        }
         function renderSettingsView() {
-            centerPane.innerHTML = `
-                <h1>設定</h1>
-                <div class="setting-item">
-                    <label for="item-size-slider">販売アイテムのボタンサイズ: <span id="item-size-value">${state.settings.productItemSize}px</span></label>
-                    <input type="range" id="item-size-slider" min="150" max="300" value="${state.settings.productItemSize}">
-                </div>
-                <div class="setting-item">
-                    <label for="font-size-slider">アイテムの文字サイズ: <span id="font-size-value">${state.settings.productItemFontSize}px</span></label>
-                    <input type="range" id="font-size-slider" min="12" max="28" value="${state.settings.productItemFontSize}">
-                </div>
-            `;
+            centerPane.innerHTML = `<h1>設定</h1><div class="setting-item"><label for="item-size-slider">販売アイテムのボタンサイズ: <span id="item-size-value">${state.settings.productItemSize}px</span></label><input type="range" id="item-size-slider" min="150" max="300" value="${state.settings.productItemSize}"></div><div class="setting-item"><label for="font-size-slider">アイテムの文字サイズ: <span id="font-size-value">${state.settings.productItemFontSize}px</span></label><input type="range" id="font-size-slider" min="12" max="28" value="${state.settings.productItemFontSize}"></div>`;
             const sizeSlider = document.getElementById('item-size-slider');
             const sizeValueLabel = document.getElementById('item-size-value');
-            sizeSlider.addEventListener('input', (e) => {
-                state.settings.productItemSize = e.target.value;
-                sizeValueLabel.textContent = `${e.target.value}px`;
-                applySettings();
-            });
+            sizeSlider.addEventListener('input', (e) => { state.settings.productItemSize = e.target.value; sizeValueLabel.textContent = `${e.target.value}px`; applySettings(); });
             sizeSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); });
-
             const fontSlider = document.getElementById('font-size-slider');
             const fontValueLabel = document.getElementById('font-size-value');
-            fontSlider.addEventListener('input', (e) => {
-                state.settings.productItemFontSize = e.target.value;
-                fontValueLabel.textContent = `${e.target.value}px`;
-                applySettings();
-            });
+            fontSlider.addEventListener('input', (e) => { state.settings.productItemFontSize = e.target.value; fontValueLabel.textContent = `${e.target.value}px`; applySettings(); });
             fontSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); });
         }
         
-        function handleMenuClick(event) {
-            if (state.editMode.active && !confirm("レシートの編集中です。変更を破棄して移動しますか？")) return;
-            cancelEditReceipt();
-            state.activeView = event.currentTarget.textContent;
-            menuItems.forEach(item => item.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            render();
-            leftPane.classList.remove('menu-open');
-        }
+        function handleMenuClick(event) { if (state.editMode.active && !confirm("レシートの編集中です。変更を破棄して移動しますか？")) return; cancelEditReceipt(); state.activeView = event.currentTarget.textContent; menuItems.forEach(item => item.classList.remove('active')); event.currentTarget.classList.add('active'); render(); leftPane.classList.remove('menu-open'); }
         function handleProductFormSubmit(e) { e.preventDefault(); const id = document.getElementById('product-id').value; const newProduct = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('product-name').value, price: parseInt(document.getElementById('product-price').value) || 0, cost: parseInt(document.getElementById('product-cost').value) || 0, discountAmount: parseInt(document.getElementById('product-discount-amount').value) || 0 }; if (id) { state.products = state.products.map(p => p.id === newProduct.id ? newProduct : p); } else { state.products.push(newProduct); } saveData(); showToast('商品を保存しました'); render(); }
         
         window.editProduct = (id) => { const p = findProductById(id); if (!p) return; document.getElementById('product-form-title').textContent = '商品を編集'; document.getElementById('product-id').value = p.id; document.getElementById('product-name').value = p.name; document.getElementById('product-price').value = p.price; document.getElementById('product-cost').value = p.cost; document.getElementById('product-discount-amount').value = p.discountAmount; window.scrollTo(0, document.body.scrollHeight); }
@@ -242,7 +243,6 @@
         function updateCartQuantity(productId, change) { const item = state.cart.find(item => item.id === parseInt(productId)); if (item) { item.quantity += change; if (item.quantity <= 0) state.cart = state.cart.filter(cartItem => cartItem.id !== item.id); } renderCart(); }
         function addCartButtonEvents() { rightPane.querySelectorAll('.increase-btn').forEach(btn => btn.addEventListener('click', (e) => updateCartQuantity(e.target.dataset.id, 1))); rightPane.querySelectorAll('.decrease-btn').forEach(btn => btn.addEventListener('click', (e) => updateCartQuantity(e.target.dataset.id, -1))); }
         function clearCart() { state.cart = []; renderCart(); }
-
         function registerSaleOrUpdateReceipt() {
             if (state.editMode.active) {
                 const receipt = state.receipts.find(r => r.date === state.editMode.receiptDate);

@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>イベント用POSレジ (レスポンシブ対応版)</title>
+    <title>イベント用POSレジ (完成版)</title>
     <style>
         :root {
-            --product-item-size: 150px; /* 商品ボタンの基本サイズ */
+            --product-item-size: 150px;
+            /* ★変更点: アイテムの文字サイズもCSS変数で管理 */
+            --product-item-font-size: 1.1em;
         }
-        body, html { 
-            margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Meiryo, sans-serif; 
-            height: 100dvh;
-            overflow: hidden; background-color: #f4f7f6; 
-        }
+        body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Meiryo, sans-serif; height: 100dvh; overflow: hidden; background-color: #f4f7f6; }
         .container { display: flex; height: 100%; }
         .left-pane { flex: 0 0 220px; background-color: #34495e; color: white; padding: 15px; display: flex; flex-direction: column; }
-        .left-pane .menu-title { font-size: 1.3em; margin-bottom: 20px; border-bottom: 1px solid #4a627a; padding-bottom: 10px; }
-        .left-pane ul { list-style: none; padding: 0; }
+        .left-pane-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a627a; padding-bottom: 10px; }
+        .menu-title { font-size: 1.3em; margin: 0; }
+        #hamburger-btn { display: none; } /* ハンバーガーボタンは通常非表示 */
+        .left-pane ul { list-style: none; padding: 0; margin-top: 20px; }
         .left-pane li { padding: 16px 12px; cursor: pointer; border-radius: 8px; transition: background-color 0.2s; font-size: 1.1em; }
         .left-pane li.active, .left-pane li:hover { background-color: #4a627a; }
         .center-pane { flex-grow: 1; padding: 25px; overflow-y: auto; }
@@ -25,10 +25,10 @@
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--product-item-size), 1fr)); gap: 20px; }
         .product-item { display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; background-color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; padding: 12px; }
         .product-item:hover { transform: translateY(-5px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .product-item .name { font-weight: 600; font-size: 1.1em; margin-bottom: 8px; }
-        .product-item .price { color: #555; font-size: 1.1em; }
-        .product-item .price .discounted { font-weight: bold; font-size: 1.25em; color: #e74c3c; }
-        .product-item .price s { color: #999; font-size: 0.9em; }
+        .product-item .name { font-weight: 600; font-size: var(--product-item-font-size); margin-bottom: 8px; } /* ★変更点 */
+        .product-item .price { color: #555; font-size: calc(var(--product-item-font-size) * 0.95); } /* ★変更点 */
+        .product-item .price .discounted { font-weight: bold; font-size: calc(var(--product-item-font-size) * 1.1); color: #e74c3c; } /* ★変更点 */
+        .product-item .price s { color: #999; }
 
         .cart-header { padding: 18px; font-size: 1.3em; font-weight: bold; border-bottom: 1px solid #eee; }
         .cart-header.editing { background-color: #e67e22; color: white; }
@@ -42,7 +42,10 @@
         .cart-item-controls button { width: 32px; height: 32px; border: 1px solid #ccc; background: white; cursor: pointer; font-size: 1.4em; border-radius: 50%; }
         .cart-item-controls .quantity { padding: 0 16px; font-size: 1.2em; font-weight: 500; }
         .cart-footer { padding: 20px; border-top: 1px solid #eee; background-color: #fdfdfd; }
-        .total-section { display: flex; justify-content: space-between; font-size: 1.6em; font-weight: bold; margin-bottom: 20px; }
+        .total-section { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 20px; }
+        /* ★変更点: 合計金額を特大表示 */
+        .total-section .label { font-size: 1.5em; color: #333; }
+        .total-section .amount { font-size: 2.2em; color: #e74c3c; }
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .action-buttons button { padding: 18px; border: none; border-radius: 8px; font-size: 1.2em; color: white; cursor: pointer; }
         #register-btn { background-color: #27ae60; }
@@ -67,11 +70,7 @@
         .summary-card p.profit { color: #27ae60; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 14px; border: 1px solid #ddd; text-align: left; }
-        /* ★変更点: テーブルの文字サイズを大きく */
-        table th, table td {
-            font-size: 16px; 
-        }
+        th, td { padding: 14px; border: 1px solid #ddd; text-align: left; font-size: 16px; }
         th { background-color: #ecf0f1; }
         .action-btn { padding: 5px 10px; margin-right: 5px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; }
         
@@ -87,45 +86,33 @@
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 5px; padding: 16px; position: fixed; z-index: 10; right: 30px; top: 30px; font-size: 17px; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
         #toast.show { visibility: visible; opacity: 1; }
 
-        /* ★★★変更点: スマートフォン用のレスポンシブ設定★★★ */
+        /* ★★★変更点: ハンバーガーメニューとスマホ向けレスポンシブ設定★★★ */
         @media (max-width: 800px) {
-            .container {
-                flex-direction: column; /* 3カラムを縦積みに変更 */
-                height: auto; /* 高さを自動調整 */
-                overflow-y: auto; /* 全体でスクロールできるように */
+            .container { flex-direction: column; height: auto; overflow-y: auto; }
+            body, html { overflow: visible; }
+            .left-pane, .right-pane { flex-basis: auto; width: 100%; box-sizing: border-box; }
+            .left-pane { flex-direction: column; }
+            #hamburger-btn {
+                display: block; background: none; border: none; color: white;
+                font-size: 28px; cursor: pointer; padding: 0;
             }
-            body, html {
-                overflow: visible; /* スクロール制限を解除 */
-            }
-            .left-pane, .right-pane {
-                flex-basis: auto; /* 幅の固定を解除 */
-                width: 100%;
-                box-sizing: border-box;
-            }
-            .left-pane {
-                height: auto;
-            }
-            .right-pane {
-                /* 販売画面以外ではカートは非表示にする */
-                display: none;
-            }
-            .center-pane {
-                padding: 15px;
-            }
-            /* 販売画面の時だけカートも表示 */
-            .container[data-view="販売操作"] .right-pane {
-                display: flex;
-            }
-            .form-grid {
-                grid-template-columns: 1fr; /* フォームを1列に */
-            }
+            .left-pane ul { display: none; } /* メニューをデフォルトで非表示 */
+            .left-pane.menu-open ul { display: block; } /* .menu-open クラスで表示 */
+
+            .right-pane { display: none; }
+            .center-pane { padding: 15px; }
+            .container[data-view="販売操作"] .right-pane { display: flex; }
+            .form-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container" data-view="販売操作">
-        <nav class="left-pane">
-            <div class="menu-title">メニュー</div>
+        <nav class="left-pane" id="left-pane">
+            <div class="left-pane-header">
+                <h2 class="menu-title">メニュー</h2>
+                <button id="hamburger-btn">☰</button>
+            </div>
             <ul id="main-menu">
                 <li class="active">販売操作</li>
                 <li>集計</li>
@@ -154,24 +141,35 @@
                 state.products = data.products || getDefaultProducts();
                 state.receipts = data.receipts || [];
                 state.settings = data.settings || { productItemSize: 150 };
-            } else {
-                state.products = getDefaultProducts();
-            }
+            } else { state.products = getDefaultProducts(); }
             applySettings();
         }
-        function applySettings() { document.documentElement.style.setProperty('--product-item-size', `${state.settings.productItemSize}px`); }
+        function applySettings() {
+            const size = state.settings.productItemSize;
+            document.documentElement.style.setProperty('--product-item-size', `${size}px`);
+            // ★変更点: ボタンサイズに連動してフォントサイズを計算・適用
+            const fontSize = Math.max(12, size / 12); // サイズを12で割った値を基本フォントサイズに（最小12px）
+            document.documentElement.style.setProperty('--product-item-font-size', `${fontSize}px`);
+        }
         function getDefaultProducts() { return [{ id: 1, name: "Tシャツ", price: 2500, cost: 1000, discountAmount: 0 },{ id: 2, name: "トートバッグ", price: 1800, cost: 700, discountAmount: 300 },{ id: 3, name: "ステッカー", price: 800, cost: 200, discountAmount: 0 }]; }
 
         const container = document.querySelector('.container');
+        const leftPane = document.getElementById('left-pane');
         const centerPane = document.getElementById('center-pane');
         const rightPane = document.getElementById('right-pane');
         const menuItems = document.querySelectorAll('#main-menu li');
+        const hamburgerBtn = document.getElementById('hamburger-btn');
         const toast = document.getElementById('toast');
         function showToast(message) { toast.textContent = message; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
+        // ★変更点: ハンバーガーメニューのクリックイベント
+        hamburgerBtn.addEventListener('click', () => {
+            leftPane.classList.toggle('menu-open');
+        });
+
         function render() {
             const view = state.activeView;
-            container.dataset.view = view; // ★変更点: CSSに現在の画面を伝える
+            container.dataset.view = view;
             rightPane.style.display = 'none';
             try {
                 switch (view) {
@@ -186,15 +184,11 @@
         
         function renderSalesView() { const isEditing = state.editMode.active; const headerClass = isEditing ? 'cart-header editing' : 'cart-header'; const headerText = isEditing ? `レシート編集中` : '現在の会計'; const registerBtnClass = isEditing ? 'update' : ''; const registerBtnText = isEditing ? '更新' : '登録'; const clearBtnText = isEditing ? '編集中止' : 'クリア'; centerPane.innerHTML = '<div class="product-grid"></div>'; rightPane.innerHTML = `<div class="${headerClass}">${headerText}</div> <div class="cart-items"></div> <div class="cart-footer"> <div class="total-section"> <span class="label">合計</span> <span class="amount" id="total-amount">¥0</span> </div> <div class="action-buttons"> <button id="register-btn" class="${registerBtnClass}">${registerBtnText}</button> <button id="clear-btn">${clearBtnText}</button> </div> </div>`; renderProductsGrid(); renderCart(); document.getElementById('clear-btn').addEventListener('click', isEditing ? cancelEditReceipt : clearCart); document.getElementById('register-btn').addEventListener('click', registerSaleOrUpdateReceipt); }
         function renderProductsGrid() {
-            const productGrid = centerPane.querySelector('.product-grid');
-            if (!productGrid) return;
+            const productGrid = centerPane.querySelector('.product-grid'); if (!productGrid) return;
             productGrid.innerHTML = '';
             state.products.forEach(p => {
-                const item = document.createElement('div');
-                item.className = 'product-item';
-                let priceHtml = p.discountAmount > 0
-                    ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>`
-                    : `<div class="price">¥${p.price.toLocaleString()}</div>`;
+                const item = document.createElement('div'); item.className = 'product-item';
+                let priceHtml = p.discountAmount > 0 ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>` : `<div class="price">¥${p.price.toLocaleString()}</div>`;
                 item.innerHTML = `<div class="name">${p.name}</div>${priceHtml}`;
                 item.addEventListener('click', () => addProductToCart(p.id));
                 productGrid.appendChild(item);
@@ -218,7 +212,16 @@
             slider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); });
         }
         
-        function handleMenuClick(event) { if (state.editMode.active && !confirm("レシートの編集中です。変更を破棄して移動しますか？")) return; cancelEditReceipt(); state.activeView = event.currentTarget.textContent; menuItems.forEach(item => item.classList.remove('active')); event.currentTarget.classList.add('active'); render(); }
+        function handleMenuClick(event) {
+            if (state.editMode.active && !confirm("レシートの編集中です。変更を破棄して移動しますか？")) return;
+            cancelEditReceipt();
+            state.activeView = event.currentTarget.textContent;
+            menuItems.forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            render();
+            // ★変更点: メニューを選択したら、ハンバーガーメニューを閉じる
+            leftPane.classList.remove('menu-open');
+        }
         function handleProductFormSubmit(e) { e.preventDefault(); const id = document.getElementById('product-id').value; const newProduct = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('product-name').value, price: parseInt(document.getElementById('product-price').value) || 0, cost: parseInt(document.getElementById('product-cost').value) || 0, discountAmount: parseInt(document.getElementById('product-discount-amount').value) || 0 }; if (id) { state.products = state.products.map(p => p.id === newProduct.id ? newProduct : p); } else { state.products.push(newProduct); } saveData(); showToast('商品を保存しました'); render(); }
         
         window.editProduct = (id) => { const p = findProductById(id); if (!p) return; document.getElementById('product-form-title').textContent = '商品を編集'; document.getElementById('product-id').value = p.id; document.getElementById('product-name').value = p.name; document.getElementById('product-price').value = p.price; document.getElementById('product-cost').value = p.cost; document.getElementById('product-discount-amount').value = p.discountAmount; window.scrollTo(0, document.body.scrollHeight); }
@@ -239,7 +242,7 @@
                 const total = state.cart.reduce((sum, item) => { const p = findProductById(item.id); return sum + (p ? (p.price - p.discountAmount) * item.quantity : 0); }, 0);
                 receipt.items = [...state.cart]; receipt.total = Math.floor(total);
                 saveData(); showToast(`レシート #${receipt.id} を更新しました`);
-                const originalActiveView = state.activeView; cancelEditReceipt(); state.activeView = 'レシート履歴'; menuItems.forEach(item => item.classList.toggle('active', item.textContent === 'レシート履歴')); render();
+                cancelEditReceipt(); state.activeView = 'レシート履歴'; menuItems.forEach(item => item.classList.toggle('active', item.textContent === 'レシート履歴')); render();
             } else {
                 if (state.cart.length === 0) { showToast('カートに商品がありません'); return; }
                 const total = state.cart.reduce((sum, item) => { const p = findProductById(item.id); return sum + (p ? (p.price - p.discountAmount) * item.quantity : 0); }, 0);

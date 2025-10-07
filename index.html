@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>イベント用POSレジ (完成版)</title>
+    <title>イベント用POSレジ (最終調整版)</title>
     <style>
         :root {
-            --product-item-size: 150px;
-            /* ★変更点: アイテムの文字サイズもCSS変数で管理 */
-            --product-item-font-size: 1.1em;
+            --product-item-size: 250px;
+            --product-item-font-size: 18px; /* 文字サイズのデフォルト値を設定 */
         }
         body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Meiryo, sans-serif; height: 100dvh; overflow: hidden; background-color: #f4f7f6; }
         .container { display: flex; height: 100%; }
         .left-pane { flex: 0 0 220px; background-color: #34495e; color: white; padding: 15px; display: flex; flex-direction: column; }
         .left-pane-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a627a; padding-bottom: 10px; }
         .menu-title { font-size: 1.3em; margin: 0; }
-        #hamburger-btn { display: none; } /* ハンバーガーボタンは通常非表示 */
+        #hamburger-btn { display: none; background: none; border: none; color: white; font-size: 28px; cursor: pointer; padding: 0; }
         .left-pane ul { list-style: none; padding: 0; margin-top: 20px; }
         .left-pane li { padding: 16px 12px; cursor: pointer; border-radius: 8px; transition: background-color 0.2s; font-size: 1.1em; }
         .left-pane li.active, .left-pane li:hover { background-color: #4a627a; }
@@ -25,9 +24,9 @@
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--product-item-size), 1fr)); gap: 20px; }
         .product-item { display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; background-color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; padding: 12px; }
         .product-item:hover { transform: translateY(-5px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .product-item .name { font-weight: 600; font-size: var(--product-item-font-size); margin-bottom: 8px; } /* ★変更点 */
-        .product-item .price { color: #555; font-size: calc(var(--product-item-font-size) * 0.95); } /* ★変更点 */
-        .product-item .price .discounted { font-weight: bold; font-size: calc(var(--product-item-font-size) * 1.1); color: #e74c3c; } /* ★変更点 */
+        .product-item .name { font-weight: 600; font-size: var(--product-item-font-size); margin-bottom: 8px; }
+        .product-item .price { font-size: calc(var(--product-item-font-size) * 0.95); }
+        .product-item .price .discounted { font-weight: bold; font-size: calc(var(--product-item-font-size) * 1.1); color: #e74c3c; }
         .product-item .price s { color: #999; }
 
         .cart-header { padding: 18px; font-size: 1.3em; font-weight: bold; border-bottom: 1px solid #eee; }
@@ -41,11 +40,11 @@
         .cart-item-controls { display: flex; align-items: center; }
         .cart-item-controls button { width: 32px; height: 32px; border: 1px solid #ccc; background: white; cursor: pointer; font-size: 1.4em; border-radius: 50%; }
         .cart-item-controls .quantity { padding: 0 16px; font-size: 1.2em; font-weight: 500; }
-        .cart-footer { padding: 20px; border-top: 1px solid #eee; background-color: #fdfdfd; }
+        .cart-footer { padding: 25px; border-top: 1px solid #eee; background-color: #fdfdfd; }
         .total-section { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 20px; }
-        /* ★変更点: 合計金額を特大表示 */
-        .total-section .label { font-size: 1.5em; color: #333; }
-        .total-section .amount { font-size: 2.2em; color: #e74c3c; }
+        .total-section .label { font-size: 1.6em; color: #333; }
+        /* ★変更点: 合計金額をさらに特大表示 */
+        .total-section .amount { font-size: 3em; color: #e74c3c; }
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .action-buttons button { padding: 18px; border: none; border-radius: 8px; font-size: 1.2em; color: white; cursor: pointer; }
         #register-btn { background-color: #27ae60; }
@@ -86,19 +85,14 @@
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 5px; padding: 16px; position: fixed; z-index: 10; right: 30px; top: 30px; font-size: 17px; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
         #toast.show { visibility: visible; opacity: 1; }
 
-        /* ★★★変更点: ハンバーガーメニューとスマホ向けレスポンシブ設定★★★ */
         @media (max-width: 800px) {
             .container { flex-direction: column; height: auto; overflow-y: auto; }
             body, html { overflow: visible; }
             .left-pane, .right-pane { flex-basis: auto; width: 100%; box-sizing: border-box; }
             .left-pane { flex-direction: column; }
-            #hamburger-btn {
-                display: block; background: none; border: none; color: white;
-                font-size: 28px; cursor: pointer; padding: 0;
-            }
-            .left-pane ul { display: none; } /* メニューをデフォルトで非表示 */
-            .left-pane.menu-open ul { display: block; } /* .menu-open クラスで表示 */
-
+            #hamburger-btn { display: block; }
+            .left-pane ul { display: none; }
+            .left-pane.menu-open ul { display: block; }
             .right-pane { display: none; }
             .center-pane { padding: 15px; }
             .container[data-view="販売操作"] .right-pane { display: flex; }
@@ -131,25 +125,34 @@
         let state = {
             products: [], cart: [], receipts: [], activeView: '販売操作',
             editMode: { active: false, receiptDate: null },
-            settings: { productItemSize: 150 }
+            // ★変更点: デフォルト値を調整、文字サイズ設定を追加
+            settings: {
+                productItemSize: 250,
+                productItemFontSize: 18
+            }
         };
 
         function saveData() { localStorage.setItem('posData', JSON.stringify({ products: state.products, receipts: state.receipts, settings: state.settings })); }
         function loadData() {
             const data = JSON.parse(localStorage.getItem('posData'));
+            const defaultSettings = { productItemSize: 250, productItemFontSize: 18 };
             if (data) {
                 state.products = data.products || getDefaultProducts();
                 state.receipts = data.receipts || [];
-                state.settings = data.settings || { productItemSize: 150 };
-            } else { state.products = getDefaultProducts(); }
+                state.settings = data.settings || defaultSettings;
+                // 古い設定データにfontSizeがない場合を考慮
+                if (!state.settings.productItemFontSize) {
+                    state.settings.productItemFontSize = defaultSettings.productItemFontSize;
+                }
+            } else {
+                state.products = getDefaultProducts();
+            }
             applySettings();
         }
         function applySettings() {
-            const size = state.settings.productItemSize;
-            document.documentElement.style.setProperty('--product-item-size', `${size}px`);
-            // ★変更点: ボタンサイズに連動してフォントサイズを計算・適用
-            const fontSize = Math.max(12, size / 12); // サイズを12で割った値を基本フォントサイズに（最小12px）
-            document.documentElement.style.setProperty('--product-item-font-size', `${fontSize}px`);
+            // ★変更点: 文字サイズとボタンサイズを独立して適用
+            document.documentElement.style.setProperty('--product-item-size', `${state.settings.productItemSize}px`);
+            document.documentElement.style.setProperty('--product-item-font-size', `${state.settings.productItemFontSize}px`);
         }
         function getDefaultProducts() { return [{ id: 1, name: "Tシャツ", price: 2500, cost: 1000, discountAmount: 0 },{ id: 2, name: "トートバッグ", price: 1800, cost: 700, discountAmount: 300 },{ id: 3, name: "ステッカー", price: 800, cost: 200, discountAmount: 0 }]; }
 
@@ -162,10 +165,7 @@
         const toast = document.getElementById('toast');
         function showToast(message) { toast.textContent = message; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
 
-        // ★変更点: ハンバーガーメニューのクリックイベント
-        hamburgerBtn.addEventListener('click', () => {
-            leftPane.classList.toggle('menu-open');
-        });
+        hamburgerBtn.addEventListener('click', () => { leftPane.classList.toggle('menu-open'); });
 
         function render() {
             const view = state.activeView;
@@ -183,33 +183,42 @@
         }
         
         function renderSalesView() { const isEditing = state.editMode.active; const headerClass = isEditing ? 'cart-header editing' : 'cart-header'; const headerText = isEditing ? `レシート編集中` : '現在の会計'; const registerBtnClass = isEditing ? 'update' : ''; const registerBtnText = isEditing ? '更新' : '登録'; const clearBtnText = isEditing ? '編集中止' : 'クリア'; centerPane.innerHTML = '<div class="product-grid"></div>'; rightPane.innerHTML = `<div class="${headerClass}">${headerText}</div> <div class="cart-items"></div> <div class="cart-footer"> <div class="total-section"> <span class="label">合計</span> <span class="amount" id="total-amount">¥0</span> </div> <div class="action-buttons"> <button id="register-btn" class="${registerBtnClass}">${registerBtnText}</button> <button id="clear-btn">${clearBtnText}</button> </div> </div>`; renderProductsGrid(); renderCart(); document.getElementById('clear-btn').addEventListener('click', isEditing ? cancelEditReceipt : clearCart); document.getElementById('register-btn').addEventListener('click', registerSaleOrUpdateReceipt); }
-        function renderProductsGrid() {
-            const productGrid = centerPane.querySelector('.product-grid'); if (!productGrid) return;
-            productGrid.innerHTML = '';
-            state.products.forEach(p => {
-                const item = document.createElement('div'); item.className = 'product-item';
-                let priceHtml = p.discountAmount > 0 ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>` : `<div class="price">¥${p.price.toLocaleString()}</div>`;
-                item.innerHTML = `<div class="name">${p.name}</div>${priceHtml}`;
-                item.addEventListener('click', () => addProductToCart(p.id));
-                productGrid.appendChild(item);
-            });
-        }
+        function renderProductsGrid() { const productGrid = centerPane.querySelector('.product-grid'); if (!productGrid) return; productGrid.innerHTML = ''; state.products.forEach(p => { const item = document.createElement('div'); item.className = 'product-item'; let priceHtml = p.discountAmount > 0 ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>` : `<div class="price">¥${p.price.toLocaleString()}</div>`; item.innerHTML = `<div class="name">${p.name}</div>${priceHtml}`; item.addEventListener('click', () => addProductToCart(p.id)); productGrid.appendChild(item); }); }
         function renderCart() { const cartItemsContainer = rightPane.querySelector('.cart-items'); if (!cartItemsContainer) return; cartItemsContainer.innerHTML = ''; let total = 0; const normalItems = state.cart.filter(item => findProductById(item.id) && findProductById(item.id).discountAmount === 0); const discountedItems = state.cart.filter(item => findProductById(item.id) && findProductById(item.id).discountAmount > 0); const createItemHtml = (cartItem) => { const product = findProductById(cartItem.id); if(!product) return { html: '', subtotal: 0 }; const finalPrice = product.price - product.discountAmount; const subtotal = finalPrice * cartItem.quantity; const priceHtml = product.discountAmount > 0 ? `<span class="original-price">¥${product.price.toLocaleString()}</span> ¥${finalPrice.toLocaleString()}` : `¥${product.price.toLocaleString()}`; const html = `<div class="cart-item"><div class="cart-item-info"><div class="name">${product.name}</div><div class="price">${cartItem.quantity} x ${priceHtml}</div></div><div class="cart-item-controls"><button class="decrease-btn" data-id="${cartItem.id}">-</button><span class="quantity">${cartItem.quantity}</span><button class="increase-btn" data-id="${cartItem.id}">+</button></div></div>`; return { html, subtotal }; }; normalItems.forEach(item => { const result = createItemHtml(item); cartItemsContainer.innerHTML += result.html; total += result.subtotal; }); if(discountedItems.length > 0) { cartItemsContainer.innerHTML += '<div class="cart-separator">割引商品</div>'; discountedItems.forEach(item => { const result = createItemHtml(item); cartItemsContainer.innerHTML += result.html; total += result.subtotal; }); } rightPane.querySelector('#total-amount').textContent = `¥${Math.floor(total).toLocaleString()}`; addCartButtonEvents(); }
         function renderSummaryView() { let totalRevenue = 0, totalCost = 0; const salesSummary = {}; state.receipts.forEach(receipt => { receipt.items.forEach(item => { const product = findProductById(item.id); if (!product) return; if (!salesSummary[item.id]) salesSummary[item.id] = { name: product.name, quantity: 0, revenue: 0 }; const revenue = (product.price - product.discountAmount) * item.quantity; salesSummary[item.id].quantity += item.quantity; salesSummary[item.id].revenue += revenue; totalRevenue += revenue; totalCost += product.cost * item.quantity; }); }); const tableRows = Object.values(salesSummary).map(s => `<tr><td>${s.name}</td><td>${s.quantity}</td><td>¥${Math.floor(s.revenue).toLocaleString()}</td></tr>`).join(''); centerPane.innerHTML = `<h1>集計</h1><div class="summary-cards-container"><div class="summary-card"><h3>総売上</h3><p>¥${Math.floor(totalRevenue).toLocaleString()}</p></div><div class="summary-card"><h3>総原価</h3><p>¥${Math.floor(totalCost).toLocaleString()}</p></div><div class="summary-card"><h3>総利益</h3><p class="profit">¥${Math.floor(totalRevenue - totalCost).toLocaleString()}</p></div></div><h2>商品別 売上一覧</h2><table><thead><tr><th>商品名</th><th>販売数</th><th>売上</th></tr></thead><tbody>${tableRows}</tbody></table>`;}
-        function renderReceiptsView() {
-            const receiptListHtml = state.receipts.map((receipt) => {
-                const itemsHtml = receipt.items.map(item => { const p = findProductById(item.id); return `<li>${p ? p.name : '削除済商品'} x ${item.quantity}</li>`; }).join('');
-                return `<div class="receipt-card"><div class="receipt-card-header"><h4>レシート #${receipt.id}</h4><span>${new Date(receipt.date).toLocaleString()}</span></div><p class="total">¥${receipt.total.toLocaleString()}</p><ul>${itemsHtml}</ul><div class="receipt-card-footer"><button class="action-btn" onclick="editReceipt('${receipt.date}')">編集</button><button class="action-btn" onclick="deleteReceipt('${receipt.date}')">削除</button></div></div>`;
-            }).join('');
-            centerPane.innerHTML = `<h1>レシート履歴</h1><div class="receipt-grid">${receiptListHtml || '<p>まだ会計履歴はありません。</p>'}</div>`;
-        }
+        function renderReceiptsView() { const receiptListHtml = state.receipts.map((receipt) => { const itemsHtml = receipt.items.map(item => { const p = findProductById(item.id); return `<li>${p ? p.name : '削除済商品'} x ${item.quantity}</li>`; }).join(''); return `<div class="receipt-card"><div class="receipt-card-header"><h4>レシート #${receipt.id}</h4><span>${new Date(receipt.date).toLocaleString()}</span></div><p class="total">¥${receipt.total.toLocaleString()}</p><ul>${itemsHtml}</ul><div class="receipt-card-footer"><button class="action-btn" onclick="editReceipt('${receipt.date}')">編集</button><button class="action-btn" onclick="deleteReceipt('${receipt.date}')">削除</button></div></div>`; }).join(''); centerPane.innerHTML = `<h1>レシート履歴</h1><div class="receipt-grid">${receiptListHtml || '<p>まだ会計履歴はありません。</p>'}</div>`; }
         function renderProductsSettingsView() { const productsHtml = state.products.map(p => `<tr><td>${p.name}</td><td>¥${p.price.toLocaleString()}</td><td>¥${p.cost.toLocaleString()}</td><td>¥${p.discountAmount.toLocaleString()}</td><td><button class="action-btn" onclick="editProduct(${p.id})">編集</button><button class="action-btn" onclick="deleteProduct(${p.id})">削除</button></td></tr>`).join(''); centerPane.innerHTML = `<h1>商品一覧設定</h1><table><thead><tr><th>名前</th><th>価格</th><th>原価</th><th>割引額</th><th>操作</th></tr></thead><tbody>${productsHtml}</tbody></table><div class="form-section"><h3 id="product-form-title">新規商品追加</h3><form id="product-form"><input type="hidden" id="product-id"><div class="form-grid"><input type="text" id="product-name" placeholder="商品名" required><input type="number" id="product-price" placeholder="価格" required><input type="number" id="product-cost" placeholder="原価" required><input type="number" id="product-discount-amount" placeholder="割引額 (なければ0)" required></div><button type="submit" style="width:100%; padding:15px; margin-top:15px; background:#2980b9; color:white; border:none; border-radius:8px; font-size:1.1em;">保存</button></form></div>`; document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit); }
+        
+        // ★変更点: 設定画面に文字サイズスライダーを追加
         function renderSettingsView() {
-            centerPane.innerHTML = `<h1>設定</h1><div class="setting-item"><label for="item-size-slider">販売アイテムのボタンサイズ: <span id="item-size-value">${state.settings.productItemSize}px</span></label><input type="range" id="item-size-slider" min="100" max="250" value="${state.settings.productItemSize}"></div>`;
-            const slider = document.getElementById('item-size-slider');
-            const valueLabel = document.getElementById('item-size-value');
-            slider.addEventListener('input', (e) => { const newSize = e.target.value; state.settings.productItemSize = newSize; valueLabel.textContent = `${newSize}px`; applySettings(); });
-            slider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); });
+            centerPane.innerHTML = `
+                <h1>設定</h1>
+                <div class="setting-item">
+                    <label for="item-size-slider">販売アイテムのボタンサイズ: <span id="item-size-value">${state.settings.productItemSize}px</span></label>
+                    <input type="range" id="item-size-slider" min="150" max="300" value="${state.settings.productItemSize}">
+                </div>
+                <div class="setting-item">
+                    <label for="font-size-slider">アイテムの文字サイズ: <span id="font-size-value">${state.settings.productItemFontSize}px</span></label>
+                    <input type="range" id="font-size-slider" min="12" max="28" value="${state.settings.productItemFontSize}">
+                </div>
+            `;
+            const sizeSlider = document.getElementById('item-size-slider');
+            const sizeValueLabel = document.getElementById('item-size-value');
+            sizeSlider.addEventListener('input', (e) => {
+                state.settings.productItemSize = e.target.value;
+                sizeValueLabel.textContent = `${e.target.value}px`;
+                applySettings();
+            });
+            sizeSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); });
+
+            const fontSlider = document.getElementById('font-size-slider');
+            const fontValueLabel = document.getElementById('font-size-value');
+            fontSlider.addEventListener('input', (e) => {
+                state.settings.productItemFontSize = e.target.value;
+                fontValueLabel.textContent = `${e.target.value}px`;
+                applySettings();
+            });
+            fontSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); });
         }
         
         function handleMenuClick(event) {
@@ -219,7 +228,6 @@
             menuItems.forEach(item => item.classList.remove('active'));
             event.currentTarget.classList.add('active');
             render();
-            // ★変更点: メニューを選択したら、ハンバーガーメニューを閉じる
             leftPane.classList.remove('menu-open');
         }
         function handleProductFormSubmit(e) { e.preventDefault(); const id = document.getElementById('product-id').value; const newProduct = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('product-name').value, price: parseInt(document.getElementById('product-price').value) || 0, cost: parseInt(document.getElementById('product-cost').value) || 0, discountAmount: parseInt(document.getElementById('product-discount-amount').value) || 0 }; if (id) { state.products = state.products.map(p => p.id === newProduct.id ? newProduct : p); } else { state.products.push(newProduct); } saveData(); showToast('商品を保存しました'); render(); }
@@ -228,7 +236,7 @@
         window.deleteProduct = (id) => { if (confirm('本当にこの商品を削除しますか？')) { state.products = state.products.filter(p => p.id !== id); saveData(); showToast('商品を削除しました'); render(); } }
         window.deleteReceipt = (date) => { if (confirm('本当にこのレシートを削除しますか？')) { state.receipts = state.receipts.filter(r => r.date !== date); saveData(); showToast('レシートを削除しました'); render(); } }
         window.editReceipt = (date) => { const receipt = state.receipts.find(r => r.date === date); if (!receipt) return; state.editMode = { active: true, receiptDate: date }; state.cart = JSON.parse(JSON.stringify(receipt.items)); state.activeView = '販売操作'; menuItems.forEach(item => item.classList.toggle('active', item.textContent === '販売操作')); render(); }
-
+        
         function cancelEditReceipt() { state.editMode = { active: false, receiptDate: null }; state.cart = []; }
         function addProductToCart(productId) { const item = state.cart.find(item => item.id === productId); if (item) { item.quantity++; } else { state.cart.push({ id: productId, quantity: 1 }); } renderCart(); }
         function updateCartQuantity(productId, change) { const item = state.cart.find(item => item.id === parseInt(productId)); if (item) { item.quantity += change; if (item.quantity <= 0) state.cart = state.cart.filter(cartItem => cartItem.id !== item.id); } renderCart(); }

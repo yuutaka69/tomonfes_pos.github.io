@@ -65,7 +65,7 @@
         #products-table tbody tr.dragging { opacity: 0.5; background: #ecf0f1; }
         #products-table tbody tr.drag-over { border-top: 2px solid #3498db; }
         
-        /* ★変更点: レシート履歴のデザインを再修正 */
+        /* レシート履歴のデザイン */
         .receipt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .receipt-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); padding: 20px; display: flex; flex-direction: column; }
         .receipt-card-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px; }
@@ -86,14 +86,14 @@
         .summary-card.cost { background-color: #feefef; color: #e74c3c; }
         .summary-card.profit { background-color: #e9f7ef; color: #27ae60; }
         
-        /* ★変更点: フォーム入力欄のデザインを再修正 */
+        /* フォーム入力欄のデザイン */
         .form-section { background: #fff; padding: 25px; border-radius: 10px; margin-top: 25px; border: 1px solid #e0e0e0; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .form-grid input { font-size: 16px; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
 
         .setting-item { margin-bottom: 25px; }
         .setting-item label { display: block; font-size: 1.1em; margin-bottom: 10px; }
-        /* ★変更点: 設定スライダーのデザインを再修正 */
+        /* 設定スライダーのデザイン */
         input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background: #ddd; border-radius: 5px; outline: none; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; background: #3498db; border-radius: 50%; cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
         input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; background: #3498db; border-radius: 50%; cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
@@ -114,10 +114,22 @@
             .left-pane li { border-radius: 0; }
             .center-pane { flex-grow: 1; padding: 15px; }
             .right-pane { display: none; }
-            .container[data-view="販売操作"] { padding-bottom: 180px; box-sizing: border-box; }
-            .container[data-view="販売操作"] .right-pane { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 180px; width: 100%; z-index: 5; border-top: 2px solid #34495e; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); }
+            
+            /* ★変更点: 固定フッター用のpaddingを削除 */
+            .container[data-view="販売操作"] {
+                box-sizing: border-box;
+            }
+            
+            /* ★変更点: position: fixedと関連スタイルを削除し、通常の流れで表示 */
+            .container[data-view="販売操作"] .right-pane {
+                display: flex;
+                width: 100%;
+                border-top: 2px solid #34495e;
+                margin-top: 15px; /* 上の要素との間に余白を追加 */
+            }
+
             .container[data-view="販売操作"] .cart-items { display: none; }
-            .cart-footer { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+            .cart-footer { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; box-shadow: none; }
             .total-section .label { font-size: 1.2em; }
             .total-section .amount { font-size: 2em; }
             .action-buttons button { padding: 15px; font-size: 1.1em; }
@@ -183,7 +195,6 @@
         function renderSalesView() { const isEditing = state.editMode.active; const headerClass = isEditing ? 'cart-header editing' : 'cart-header'; const headerText = isEditing ? `レシート編集中` : '現在の会計'; const registerBtnClass = isEditing ? 'update' : ''; const registerBtnText = isEditing ? '更新' : '登録'; const clearBtnText = isEditing ? '編集中止' : 'クリア'; centerPane.innerHTML = '<div class="product-grid"></div>'; rightPane.innerHTML = `<div class="${headerClass}">${headerText}</div><div class="cart-items"></div><div class="cart-footer"><div class="total-section"><span class="label">合計</span><span class="amount" id="total-amount">¥0</span></div><div class="action-buttons"><button id="register-btn" class="${registerBtnClass}">${registerBtnText}</button><button id="clear-btn">${clearBtnText}</button></div></div>`; renderProductsGrid(); renderCart(); document.getElementById('clear-btn').addEventListener('click', isEditing ? cancelEditReceipt : clearCart); document.getElementById('register-btn').addEventListener('click', registerSaleOrUpdateReceipt); }
         function renderProductsGrid() { const productGrid = centerPane.querySelector('.product-grid'); if (!productGrid) return; productGrid.innerHTML = ''; const normalProducts = state.products.filter(p => p.discountAmount === 0); const discountedProducts = state.products.filter(p => p.discountAmount > 0); const createItemHtml = p => { const cartItem = state.cart.find(item => item.id === p.id); const quantityBadge = cartItem ? `<div class="quantity-badge">${cartItem.quantity}</div>` : ''; let priceHtml = p.discountAmount > 0 ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>` : `<div class="price">¥${p.price.toLocaleString()}</div>`; const item = document.createElement('div'); item.className = 'product-item'; item.innerHTML = `${quantityBadge}<div class="name">${p.name}</div>${priceHtml}`; item.addEventListener('click', () => addProductToCart(p.id)); productGrid.appendChild(item); }; normalProducts.forEach(createItemHtml); if (discountedProducts.length > 0) { const separator = document.createElement('div'); separator.className = 'grid-separator'; separator.textContent = '割引商品'; productGrid.appendChild(separator); discountedProducts.forEach(createItemHtml); } }
         
-        // ★変更点: カート内サムネイルのHTMLを削除
         function renderCart() {
             const cartItemsContainer = rightPane.querySelector('.cart-items'); if (!cartItemsContainer) return;
             cartItemsContainer.innerHTML = ''; let total = 0;

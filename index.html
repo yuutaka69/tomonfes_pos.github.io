@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>イベント用POSレジ (完成版)</title>
     <style>
         :root { --product-item-size: 250px; --product-item-font-size: 18px; }
@@ -32,12 +32,13 @@
         .cart-footer { padding: 25px; border-top: 1px solid #eee; background-color: #fdfdfd; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
         .total-section { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 20px; }
         .total-section .label { font-size: 1.6em; color: #333; }
-        .total-section .amount { font-size: 3em; color: #2c3e50; }
-        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .action-buttons button { padding: 18px; border: none; border-radius: 8px; font-size: 1.2em; color: white; cursor: pointer; }
-        #register-btn { background-color: #27ae60; }
-        #register-btn.update { background-color: #e67e22; }
-        #clear-btn { background-color: #c0392b; }
+        .total-section .amount { font-size: 3em; color: #2c3e50; font-weight: 800; }
+        .action-buttons { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+        .action-buttons button { padding: 20px; border: none; border-radius: 10px; font-size: 1.2em; color: white; cursor: pointer; font-weight: 700; transition: transform 0.1s, box-shadow 0.1s; }
+        .action-buttons button:active { transform: scale(0.97); }
+        #register-btn { background-color: #27ae60; box-shadow: 0 4px 12px rgba(39,174,96,0.35); letter-spacing: 0.05em; }
+        #register-btn.update { background-color: #e67e22; box-shadow: 0 4px 12px rgba(230,126,34,0.35); }
+        #clear-btn { background-color: #95a5a6; }
         
         .cart-item { display: flex; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background-color: #f8f9fa; border: 1px solid #e9ecef; }
         .cart-item-info { flex-grow: 1; }
@@ -95,8 +96,30 @@
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; background: #3498db; border-radius: 50%; cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
         input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; background: #3498db; border-radius: 50%; cursor: pointer; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
         
-        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 5px; padding: 16px; position: fixed; z-index: 10; right: 30px; top: 30px; font-size: 17px; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px 20px; position: fixed; z-index: 100; right: 30px; top: 30px; font-size: 17px; opacity: 0; transition: opacity 0.5s, visibility 0.5s; }
         #toast.show { visibility: visible; opacity: 1; }
+        #toast.success { background-color: #27ae60; }
+        #toast.error { background-color: #c0392b; }
+
+        /* お釣り計算モーダル */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 200; }
+        .modal-box { background: white; border-radius: 16px; padding: 32px; width: min(440px, 92vw); box-shadow: 0 8px 40px rgba(0,0,0,0.3); }
+        .modal-box h2 { margin: 0 0 16px; font-size: 1.4em; color: #2c3e50; }
+        .modal-total { font-size: 2em; font-weight: 800; color: #2c3e50; margin-bottom: 20px; }
+        .modal-box label { display: block; font-weight: 600; margin-bottom: 8px; color: #555; }
+        .modal-box input[type="number"] { width: 100%; font-size: 1.8em; padding: 12px 14px; border: 2px solid #3498db; border-radius: 8px; box-sizing: border-box; margin-bottom: 16px; outline: none; }
+        .modal-box input[type="number"]:focus { border-color: #2980b9; box-shadow: 0 0 0 3px rgba(52,152,219,0.2); }
+        .modal-change { font-size: 1.8em; font-weight: 800; color: #27ae60; margin-bottom: 24px; min-height: 1.5em; }
+        .modal-change.over { color: #e74c3c; }
+        .modal-buttons { display: flex; gap: 12px; }
+        .modal-buttons button { flex: 1; padding: 16px; font-size: 1.1em; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; }
+        .modal-btn-confirm { background-color: #27ae60; color: white; }
+        .modal-btn-cancel { background-color: #ecf0f1; color: #555; }
+
+        @media (max-width: 1024px) {
+            /* タブレット: 右ペインをやや狭く */
+            .right-pane { flex: 0 0 320px; }
+        }
 
         @media (max-width: 800px) {
             body, html { overflow: visible; }
@@ -107,29 +130,52 @@
             .menu-title { font-size: 1.1em; }
             #hamburger-btn { display: block; }
             .left-pane ul { display: none; }
-            .left-pane.menu-open ul { display: block; }
+            .left-pane.menu-open ul { display: block; margin-top: 8px; }
             .left-pane li { border-radius: 0; }
 
-            /* ★変更点: 表示順を1番目（メニューの直後）に設定 */
-            .center-pane { flex-grow: 1; padding: 15px; order: 1; }
-            
+            .center-pane { flex-grow: 1; padding: 12px; order: 1; }
+
             .right-pane { display: none; }
             .container[data-view="販売操作"] { box-sizing: border-box; }
-            
-            /* ★変更点: 表示順を2番目（商品一覧の後）に設定し、区切り線を調整 */
+
             .container[data-view="販売操作"] .right-pane {
                 display: flex;
                 width: 100%;
-                border-top: 2px solid #34495e; /* 上ボーダーに戻す */
-                margin-top: 15px; /* 上の要素との間に余白を追加 */
-                order: 2; /* 表示順を2番目に */
+                border-top: 2px solid #34495e;
+                margin-top: 12px;
+                order: 2;
             }
 
-            .cart-footer { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; box-shadow: none; border-top: none; }
-            .total-section .label { font-size: 1.2em; }
+            .cart-items { max-height: 40vh; overflow-y: auto; }
+            .cart-footer { padding: 12px 15px; box-shadow: none; border-top: 1px solid #eee; }
+            .total-section { margin-bottom: 12px; }
+            .total-section .label { font-size: 1.1em; }
             .total-section .amount { font-size: 2em; }
-            .action-buttons button { padding: 15px; font-size: 1.1em; }
+            .action-buttons button { padding: 16px; font-size: 1.1em; }
             .form-grid { grid-template-columns: 1fr; }
+            table { font-size: 14px; }
+            th, td { padding: 10px 8px; }
+            .summary-card .amount { font-size: 2em; }
+            #toast { right: 12px; top: 12px; min-width: 180px; font-size: 15px; }
+        }
+
+        @media (max-width: 480px) {
+            /* スマホ: よりコンパクトに */
+            .center-pane { padding: 8px; }
+            .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .product-item { padding: 10px 8px; }
+            .cart-item { padding: 10px; margin-bottom: 10px; }
+            .cart-item .name { font-size: 1em; }
+            .cart-item-controls button { width: 36px; height: 36px; font-size: 1.4em; }
+            .cart-item-controls .quantity { padding: 0 10px; font-size: 1.2em; }
+            .total-section .amount { font-size: 1.8em; }
+            .action-buttons button { padding: 14px; font-size: 1em; }
+            .receipt-grid { grid-template-columns: 1fr; }
+            .summary-cards-container { flex-direction: column; }
+            .summary-card { min-width: unset; }
+            .modal-box { padding: 20px; }
+            .modal-total { font-size: 1.6em; }
+            .modal-change { font-size: 1.5em; }
         }
     </style>
 </head>
@@ -140,6 +186,19 @@
         <aside class="right-pane" id="right-pane"></aside>
     </div>
     <div id="toast"></div>
+    <div id="change-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h2>お会計</h2>
+            <div class="modal-total" id="modal-total-amount">¥0</div>
+            <label for="received-amount">受取金額 (円)</label>
+            <input type="number" id="received-amount" placeholder="例: 3000" min="0" inputmode="numeric">
+            <div class="modal-change" id="change-amount">-</div>
+            <div class="modal-buttons">
+                <button class="modal-btn-confirm" id="modal-confirm-btn">確定・記録</button>
+                <button class="modal-btn-cancel" id="modal-cancel-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -159,7 +218,7 @@
         const centerPane = document.getElementById('center-pane');
         const rightPane = document.getElementById('right-pane');
         const toast = document.getElementById('toast');
-        function showToast(message) { toast.textContent = message; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); }, 3000); }
+        function showToast(message, type = 'success') { toast.textContent = message; toast.className = ''; toast.classList.add('show', type); setTimeout(() => { toast.classList.remove('show', type); }, 3000); }
 
         function render() {
             const view = state.activeView;
@@ -199,7 +258,7 @@
                 const finalPrice = product.price - product.discountAmount;
                 const subtotal = finalPrice * cartItem.quantity;
                 const priceHtml = product.discountAmount > 0 ? `<span class="original-price">¥${product.price.toLocaleString()}</span> ¥${finalPrice.toLocaleString()}` : `¥${product.price.toLocaleString()}`;
-                const html = `<div class="cart-item"><div class="cart-item-info"><div class="name">${product.name}</div><div class="price">${priceHtml}</div></div><div class="cart-item-controls"><button class="decrease-btn" data-id="${cartItem.id}">-</button><span class="quantity">${cartItem.quantity}</span><button class="increase-btn" data-id="${cartItem.id}">+</button></div></div>`;
+                const html = `<div class="cart-item"><div class="cart-item-info"><div class="name">${product.name}</div><div class="price">${priceHtml}</div></div><div class="cart-item-controls"><button class="decrease-btn" data-id="${cartItem.id}">-</button><span class="quantity editable-qty" data-id="${cartItem.id}" title="タップして数量を変更" style="cursor:pointer;text-decoration:underline dotted;">${cartItem.quantity}</span><button class="increase-btn" data-id="${cartItem.id}">+</button></div></div>`;
                 return { html, subtotal };
             };
             state.cart.forEach(item => { const result = createItemHtml(item); cartItemsContainer.innerHTML += result.html; total += result.subtotal; });
@@ -207,27 +266,39 @@
             addCartButtonEvents();
         }
 
-        function renderSummaryView() { let totalRevenue = 0, totalCost = 0; const salesSummary = {}; state.receipts.forEach(receipt => { receipt.items.forEach(item => { const product = findProductById(item.id); if (!product) return; if (!salesSummary[item.id]) salesSummary[item.id] = { name: product.name, quantity: 0, revenue: 0, cost: 0, profit: 0 }; const revenue = (product.price - product.discountAmount) * item.quantity; const cost = product.cost * item.quantity; salesSummary[item.id].quantity += item.quantity; salesSummary[item.id].revenue += revenue; salesSummary[item.id].cost += cost; salesSummary[item.id].profit += (revenue - cost); totalRevenue += revenue; totalCost += cost; }); }); const tableRows = Object.values(salesSummary).map(s => `<tr><td>${s.name}</td><td>${s.quantity}</td><td>¥${Math.floor(s.revenue).toLocaleString()}</td><td>¥${Math.floor(s.cost).toLocaleString()}</td><td>¥${Math.floor(s.profit).toLocaleString()}</td></tr>`).join(''); centerPane.innerHTML = `<h1>集計</h1><div class="summary-cards-container"><div class="summary-card revenue"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-9h4v2h-4zm-2-4h8v2H8zm2 8h4v2h-4z"></path></svg><h3>総売上</h3></div><p class="amount">¥${Math.floor(totalRevenue).toLocaleString()}</p></div><div class="summary-card cost"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M17.56 12.31a8.45 8.45 0 0 0-1.2-1.2l-4.24-4.24a1 1 0 0 0-1.42 0L6.46 11.11a8.45 8.45 0 0 0-1.2 1.2A8.5 8.5 0 0 0 12 21a8.5 8.5 0 0 0 5.56-8.69zM12 19c-3.86 0-7-3.14-7-7a6.45 6.45 0 0 1 .91-3.32L12 14.83l6.09-6.15A6.45 6.45 0 0 1 19 12c0 3.86-3.14 7-7 7z"></path></svg><h3>総原価</h3></div><p class="amount">¥${Math.floor(totalCost).toLocaleString()}</p></div><div class="summary-card profit"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-12h2v4h4v2h-4v4h-2v-4H7v-2h4z"></path></svg><h3>総利益</h3></div><p class="amount">¥${Math.floor(totalRevenue - totalCost).toLocaleString()}</p></div></div><h2>商品別 詳細</h2><table><thead><tr><th>商品名</th><th>販売数</th><th class="th-revenue">売上</th><th class="th-cost">合計原価</th><th class="th-profit">利益</th></tr></thead><tbody>${tableRows}</tbody></table>`; }
+        function exportCSV() { if (state.receipts.length === 0) { showToast('エクスポートするデータがありません', 'error'); return; } const rows = [['レシートID','日時','商品名','数量','単価','割引額','小計']]; state.receipts.forEach(r => { const dateStr = new Date(r.date).toLocaleString('ja-JP'); r.items.forEach(item => { const p = findProductById(item.id); const name = p ? p.name : '削除済商品'; const price = p ? p.price : 0; const discount = p ? p.discountAmount : 0; const subtotal = (price - discount) * item.quantity; rows.push([r.id, dateStr, name, item.quantity, price, discount, subtotal]); }); }); const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `売上_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'-')}.csv`; a.click(); URL.revokeObjectURL(a.href); showToast('CSVをダウンロードしました'); }
+        function renderSummaryView() { let totalRevenue = 0, totalCost = 0; const salesSummary = {}; state.receipts.forEach(receipt => { receipt.items.forEach(item => { const product = findProductById(item.id); if (!product) return; if (!salesSummary[item.id]) salesSummary[item.id] = { name: product.name, quantity: 0, revenue: 0, cost: 0, profit: 0 }; const revenue = (product.price - product.discountAmount) * item.quantity; const cost = product.cost * item.quantity; salesSummary[item.id].quantity += item.quantity; salesSummary[item.id].revenue += revenue; salesSummary[item.id].cost += cost; salesSummary[item.id].profit += (revenue - cost); totalRevenue += revenue; totalCost += cost; }); }); const tableRows = Object.values(salesSummary).map(s => `<tr><td>${s.name}</td><td>${s.quantity}</td><td>¥${Math.floor(s.revenue).toLocaleString()}</td><td>¥${Math.floor(s.cost).toLocaleString()}</td><td>¥${Math.floor(s.profit).toLocaleString()}</td></tr>`).join(''); centerPane.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h1 style="margin:0;">集計</h1><button onclick="exportCSV()" style="padding:10px 18px;background:#2980b9;color:white;border:none;border-radius:8px;font-size:1em;cursor:pointer;font-weight:600;">📥 CSVダウンロード</button></div><div class="summary-cards-container"><div class="summary-card revenue"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-9h4v2h-4zm-2-4h8v2H8zm2 8h4v2h-4z"></path></svg><h3>総売上</h3></div><p class="amount">¥${Math.floor(totalRevenue).toLocaleString()}</p></div><div class="summary-card cost"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M17.56 12.31a8.45 8.45 0 0 0-1.2-1.2l-4.24-4.24a1 1 0 0 0-1.42 0L6.46 11.11a8.45 8.45 0 0 0-1.2 1.2A8.5 8.5 0 0 0 12 21a8.5 8.5 0 0 0 5.56-8.69zM12 19c-3.86 0-7-3.14-7-7a6.45 6.45 0 0 1 .91-3.32L12 14.83l6.09-6.15A6.45 6.45 0 0 1 19 12c0 3.86-3.14 7-7 7z"></path></svg><h3>総原価</h3></div><p class="amount">¥${Math.floor(totalCost).toLocaleString()}</p></div><div class="summary-card profit"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-12h2v4h4v2h-4v4h-2v-4H7v-2h4z"></path></svg><h3>総利益</h3></div><p class="amount">¥${Math.floor(totalRevenue - totalCost).toLocaleString()}</p></div></div><h2>商品別 詳細</h2><table><thead><tr><th>商品名</th><th>販売数</th><th class="th-revenue">売上</th><th class="th-cost">合計原価</th><th class="th-profit">利益</th></tr></thead><tbody>${tableRows}</tbody></table>`; window.exportCSV = exportCSV; }
         function renderReceiptsView() { const receiptListHtml = state.receipts.map((receipt) => { const itemsHtml = receipt.items.map(item => { const p = findProductById(item.id); return `<li>${p ? p.name : '削除済商品'} x ${item.quantity}</li>`; }).join(''); return `<div class="receipt-card"><div class="receipt-card-header"><h4>レシート #${receipt.id}</h4><span>${new Date(receipt.date).toLocaleString()}</span></div><p class="total">¥${receipt.total.toLocaleString()}</p><ul>${itemsHtml}</ul><div class="receipt-card-footer"><button class="action-btn btn-edit" onclick="editReceipt('${receipt.date}')">編集</button><button class="action-btn btn-delete" onclick="deleteReceipt('${receipt.date}')">削除</button></div></div>`; }).join(''); centerPane.innerHTML = `<h1>レシート履歴</h1><div class="receipt-grid">${receiptListHtml || '<p>まだ会計履歴はありません。</p>'}</div>`; }
         function renderProductsSettingsView() { let productsHtml = ''; state.products.forEach(p => { const isSold = isProductSold(p.id); productsHtml += `<tr draggable="${!isSold}" data-id="${p.id}"><td>${p.name} ${isSold ? '🔒' : ''}</td><td>¥${p.price.toLocaleString()}</td><td>¥${p.cost.toLocaleString()}</td><td>¥${p.discountAmount.toLocaleString()}</td><td><button class="action-btn btn-edit" onclick="editProduct(${p.id})" ${isSold ? 'disabled' : ''}>編集</button><button class="action-btn btn-delete" onclick="deleteProduct(${p.id})" ${isSold ? 'disabled' : ''}>削除</button></td></tr>`; }); centerPane.innerHTML = `<h1>商品一覧設定</h1><p>販売履歴のない商品はドラッグ＆ドロップで並び替えできます。</p><table id="products-table"><thead><tr><th>名前</th><th>価格</th><th>原価</th><th>割引額</th><th>操作</th></tr></thead><tbody>${productsHtml}</tbody></table><div class="form-section"><h3 id="product-form-title">新規商品追加</h3><form id="product-form"><input type="hidden" id="product-id"><div class="form-grid"><input type="text" id="product-name" placeholder="商品名" required><input type="number" id="product-price" placeholder="価格" required><input type="number" id="product-cost" placeholder="原価" required><input type="number" id="product-discount-amount" placeholder="割引額 (なければ0)" required></div><button type="submit" style="width:100%; padding:15px; margin-top:15px; background:#2980b9; color:white; border:none; border-radius:8px; font-size:1.1em;">保存</button></form></div>`; document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit); const tableBody = document.querySelector('#products-table tbody'); let draggedItemId = null; tableBody.addEventListener('dragstart', e => { draggedItemId = e.target.dataset.id; e.target.classList.add('dragging'); }); tableBody.addEventListener('dragend', e => e.target.classList.remove('dragging')); tableBody.addEventListener('dragover', e => { e.preventDefault(); const targetRow = e.target.closest('tr'); if (targetRow && targetRow.dataset.id !== draggedItemId && !isProductSold(targetRow.dataset.id)) { document.querySelectorAll('#products-table tr').forEach(row => row.classList.remove('drag-over')); targetRow.classList.add('drag-over'); } }); tableBody.addEventListener('dragleave', e => e.target.closest('tr')?.classList.remove('drag-over')); tableBody.addEventListener('drop', e => { e.preventDefault(); document.querySelectorAll('#products-table tr').forEach(row => row.classList.remove('drag-over')); const targetRow = e.target.closest('tr'); if (targetRow && !isProductSold(targetRow.dataset.id)) { const droppedOnItemId = targetRow.dataset.id; const draggedIndex = state.products.findIndex(p => p.id == draggedItemId); const droppedOnIndex = state.products.findIndex(p => p.id == droppedOnItemId); const [draggedItem] = state.products.splice(draggedIndex, 1); state.products.splice(droppedOnIndex, 0, draggedItem); saveData(); render(); } }); }
         function renderSettingsView() { centerPane.innerHTML = `<h1>設定</h1><div class="setting-item"><label for="item-size-slider">販売アイテムのボタンサイズ: <span id="item-size-value">${state.settings.productItemSize}px</span></label><input type="range" id="item-size-slider" min="150" max="300" value="${state.settings.productItemSize}"></div><div class="setting-item"><label for="font-size-slider">アイテムの文字サイズ: <span id="font-size-value">${state.settings.productItemFontSize}px</span></label><input type="range" id="font-size-slider" min="12" max="28" value="${state.settings.productItemFontSize}"></div>`; const sizeSlider = document.getElementById('item-size-slider'); const sizeValueLabel = document.getElementById('item-size-value'); sizeSlider.addEventListener('input', (e) => { state.settings.productItemSize = e.target.value; sizeValueLabel.textContent = `${e.target.value}px`; applySettings(); }); sizeSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); }); const fontSlider = document.getElementById('font-size-slider'); const fontValueLabel = document.getElementById('font-size-value'); fontSlider.addEventListener('input', (e) => { state.settings.productItemFontSize = e.target.value; fontValueLabel.textContent = `${e.target.value}px`; applySettings(); }); fontSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); }); }
         
         function handleMenuClick(event) { if (state.editMode.active && !confirm("レシートの編集中です。変更を破棄して移動しますか？")) return; cancelEditReceipt(); state.activeView = event.currentTarget.textContent; render(); leftPane.classList.remove('menu-open'); }
         function handleProductFormSubmit(e) { e.preventDefault(); const id = document.getElementById('product-id').value; const newProduct = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('product-name').value, price: parseInt(document.getElementById('product-price').value) || 0, cost: parseInt(document.getElementById('product-cost').value) || 0, discountAmount: parseInt(document.getElementById('product-discount-amount').value) || 0 }; if (id) { state.products = state.products.map(p => p.id == id ? {...p, ...newProduct} : p); } else { state.products.push(newProduct); } saveData(); showToast('商品を保存しました'); render(); }
-        window.editProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は編集できません。'); return; } const p = findProductById(id); if (!p) return; document.getElementById('product-form-title').textContent = '商品を編集'; document.getElementById('product-id').value = p.id; document.getElementById('product-name').value = p.name; document.getElementById('product-price').value = p.price; document.getElementById('product-cost').value = p.cost; document.getElementById('product-discount-amount').value = p.discountAmount; window.scrollTo(0, document.body.scrollHeight); }
-        window.deleteProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は削除できません。'); return; } if (confirm('本当にこの商品を削除しますか？')) { state.products = state.products.filter(p => p.id != id); saveData(); showToast('商品を削除しました'); render(); } }
+        window.editProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は編集できません。', 'error'); return; } const p = findProductById(id); if (!p) return; document.getElementById('product-form-title').textContent = '商品を編集'; document.getElementById('product-id').value = p.id; document.getElementById('product-name').value = p.name; document.getElementById('product-price').value = p.price; document.getElementById('product-cost').value = p.cost; document.getElementById('product-discount-amount').value = p.discountAmount; window.scrollTo(0, document.body.scrollHeight); }
+        window.deleteProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は削除できません。', 'error'); return; } if (confirm('本当にこの商品を削除しますか？')) { state.products = state.products.filter(p => p.id != id); saveData(); showToast('商品を削除しました'); render(); } }
         window.deleteReceipt = (date) => { if (confirm('本当にこのレシートを削除しますか？')) { state.receipts = state.receipts.filter(r => r.date !== date); saveData(); showToast('レシートを削除しました'); render(); } }
         window.editReceipt = (date) => { const receipt = state.receipts.find(r => r.date === date); if (!receipt) return; state.editMode = { active: true, receiptDate: date }; state.cart = JSON.parse(JSON.stringify(receipt.items)); state.activeView = '販売操作'; render(); }
         function cancelEditReceipt() { state.editMode = { active: false, receiptDate: null }; state.cart = []; }
         function addProductToCart(productId) { const item = state.cart.find(item => item.id == productId); if (item) { item.quantity++; } else { state.cart.push({ id: productId, quantity: 1 }); } renderCart(); renderProductsGrid(); }
         function updateCartQuantity(productId, change) { const item = state.cart.find(item => item.id == parseInt(productId)); if (item) { item.quantity += change; if (item.quantity <= 0) state.cart = state.cart.filter(cartItem => cartItem.id != item.id); } renderCart(); renderProductsGrid(); }
-        function addCartButtonEvents() { rightPane.querySelectorAll('.increase-btn').forEach(btn => btn.addEventListener('click', (e) => updateCartQuantity(e.target.dataset.id, 1))); rightPane.querySelectorAll('.decrease-btn').forEach(btn => btn.addEventListener('click', (e) => updateCartQuantity(e.target.dataset.id, -1))); }
+        function addCartButtonEvents() { rightPane.querySelectorAll('.increase-btn').forEach(btn => btn.addEventListener('click', (e) => updateCartQuantity(e.target.dataset.id, 1))); rightPane.querySelectorAll('.decrease-btn').forEach(btn => btn.addEventListener('click', (e) => updateCartQuantity(e.target.dataset.id, -1))); rightPane.querySelectorAll('.editable-qty').forEach(el => { el.addEventListener('click', () => { const id = parseInt(el.dataset.id); const current = state.cart.find(i => i.id === id)?.quantity || 1; const input = document.createElement('input'); input.type = 'number'; input.value = current; input.min = '0'; input.style.cssText = 'width:54px;font-size:1.2em;text-align:center;border:2px solid #3498db;border-radius:6px;padding:2px 4px;'; el.replaceWith(input); input.focus(); input.select(); const commit = () => { const val = parseInt(input.value); const item = state.cart.find(i => i.id === id); if (item) { if (val >= 1) { item.quantity = val; } else { state.cart = state.cart.filter(i => i.id !== id); } } saveData(); renderCart(); renderProductsGrid(); }; input.addEventListener('blur', commit); input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { renderCart(); } }); }); }); }
         function clearCart() { state.cart = []; renderCart(); renderProductsGrid(); }
-        function registerSaleOrUpdateReceipt() { if (state.editMode.active) { const receipt = state.receipts.find(r => r.date === state.editMode.receiptDate); if (!receipt) { showToast("エラー: 対象のレシートが見つかりません"); return; } const total = state.cart.reduce((sum, item) => { const p = findProductById(item.id); return sum + (p ? (p.price - p.discountAmount) * item.quantity : 0); }, 0); receipt.items = [...state.cart]; receipt.total = Math.floor(total); saveData(); showToast(`レシート #${receipt.id} を更新しました`); cancelEditReceipt(); state.activeView = 'レシート履歴'; render(); } else { if (state.cart.length === 0) { showToast('カートに商品がありません'); return; } const total = state.cart.reduce((sum, item) => { const p = findProductById(item.id); return sum + (p ? (p.price - p.discountAmount) * item.quantity : 0); }, 0); const receiptId = state.receipts.length > 0 ? Math.max(0, ...state.receipts.map(r => r.id)) + 1 : 1; state.receipts.unshift({ id: receiptId, date: new Date().toISOString(), items: [...state.cart], total: Math.floor(total) }); saveData(); showToast(`¥${Math.floor(total).toLocaleString()} で売上を記録`); clearCart(); } }
+        function calcTotal() { return Math.floor(state.cart.reduce((sum, item) => { const p = findProductById(item.id); return sum + (p ? (p.price - p.discountAmount) * item.quantity : 0); }, 0)); }
+        function openChangeModal() { const total = calcTotal(); document.getElementById('modal-total-amount').textContent = `¥${total.toLocaleString()}`; document.getElementById('received-amount').value = ''; document.getElementById('change-amount').textContent = '-'; document.getElementById('change-amount').className = 'modal-change'; document.getElementById('change-modal').dataset.total = total; document.getElementById('change-modal').style.display = 'flex'; setTimeout(() => document.getElementById('received-amount').focus(), 50); }
+        function closeChangeModal() { document.getElementById('change-modal').style.display = 'none'; }
+        function saveReceipt() { const total = calcTotal(); const receiptId = state.receipts.length > 0 ? Math.max(0, ...state.receipts.map(r => r.id)) + 1 : 1; state.receipts.unshift({ id: receiptId, date: new Date().toISOString(), items: [...state.cart], total }); saveData(); showToast(`¥${total.toLocaleString()} で売上を記録`); clearCart(); closeChangeModal(); }
+        function registerSaleOrUpdateReceipt() { if (state.editMode.active) { const receipt = state.receipts.find(r => r.date === state.editMode.receiptDate); if (!receipt) { showToast("エラー: 対象のレシートが見つかりません", 'error'); return; } const total = calcTotal(); receipt.items = [...state.cart]; receipt.total = total; saveData(); showToast(`レシート #${receipt.id} を更新しました`); cancelEditReceipt(); state.activeView = 'レシート履歴'; render(); } else { if (state.cart.length === 0) { showToast('カートに商品がありません', 'error'); return; } openChangeModal(); } }
         function findProductById(id) { return state.products.find(p => p.id == id); }
         function isProductSold(productId) { return state.receipts.some(receipt => receipt.items.some(item => item.id == productId)); }
         function init() { loadData(); render(); }
         init();
+
+        // お釣り計算モーダルのイベント
+        document.getElementById('received-amount').addEventListener('input', (e) => { const total = parseInt(document.getElementById('change-modal').dataset.total) || 0; const received = parseInt(e.target.value); const changeEl = document.getElementById('change-amount'); if (isNaN(received) || e.target.value === '') { changeEl.textContent = '-'; changeEl.className = 'modal-change'; return; } const change = received - total; if (change >= 0) { changeEl.textContent = `¥${change.toLocaleString()}`; changeEl.className = 'modal-change'; } else { changeEl.textContent = `¥${Math.abs(change).toLocaleString()} 不足`; changeEl.className = 'modal-change over'; } });
+        document.getElementById('modal-confirm-btn').addEventListener('click', saveReceipt);
+        document.getElementById('modal-cancel-btn').addEventListener('click', closeChangeModal);
+        document.getElementById('change-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('change-modal')) closeChangeModal(); });
+        document.getElementById('received-amount').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveReceipt(); } if (e.key === 'Escape') closeChangeModal(); });
     });
     </script>
 </body>

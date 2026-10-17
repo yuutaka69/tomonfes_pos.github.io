@@ -34,6 +34,10 @@
         .product-item .name { font-weight: 600; font-size: var(--product-item-font-size); margin-bottom: 8px; }
         .product-item .price { font-size: calc(var(--product-item-font-size) * 0.95); }
         .product-item .price .discounted { font-weight: bold; font-size: calc(var(--product-item-font-size) * 1.1); color: #e74c3c; }
+        .product-item.discount-product { border-color: #f0c36d; background: #fffaf0; }
+        .product-item.discount-product:hover { border-color: #e5a42e; box-shadow: 0 5px 14px rgba(208,139,24,0.16); }
+        .product-discount-tag { align-self: center; margin-bottom: 7px; padding: 4px 9px; border-radius: 999px; background: #fff0cc; color: #8a5500; font-size: 0.78em; font-weight: 800; }
+        .product-item .price .regular-price { margin-right: 5px; color: #8994a1; font-size: 0.82em; text-decoration: line-through; }
         .product-category-label { color: #718096; font-size: 0.82em; margin-bottom: 8px; }
         .empty-products { grid-column: 1 / -1; padding: 40px 16px; color: #718096; text-align: center; background: #fff; border: 1px dashed #cbd5e1; border-radius: 12px; }
         .quantity-badge { position: absolute; top: -10px; right: -10px; background-color: #e74c3c; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -351,11 +355,16 @@
                 return;
             }
             products.forEach(product => {
-                const cartQuantity = state.cart.filter(item => item.id === product.id).reduce((sum, item) => sum + item.quantity, 0);
-                const accessibleLabel = product.name + '、通常価格' + product.price.toLocaleString() + '円' + (product.discountOptions.length ? '、割引設定あり' : '');
+                const variants = [
+                    { option: null, price: product.price },
+                    ...product.discountOptions.filter(option => Number(option.amount) > 0 && Number(option.amount) < Number(product.price)).map(option => ({ option, price: product.price - Number(option.amount) }))
+                ];
+                variants.forEach(({ option, price: unitPrice }) => {
+                const cartQuantity = state.cart.filter(item => item.id === product.id && String(item.discountOptionId || '') === String(option?.id || '')).reduce((sum, item) => sum + item.quantity, 0);
+                const accessibleLabel = `${product.name}、${option ? option.name + '、割引後価格' : '通常価格'}${unitPrice.toLocaleString()}円`;
                 const button = document.createElement('button');
                 button.type = 'button';
-                button.className = 'product-item';
+                button.className = 'product-item' + (option ? ' discount-product' : '');
                 const category = document.createElement('span');
                 category.className = 'product-category-label';
                 category.textContent = getProductCategory(product);
@@ -364,14 +373,22 @@
                 name.textContent = product.name;
                 const price = document.createElement('span');
                 price.className = 'price';
-                price.textContent = '¥' + product.price.toLocaleString();
-                if (product.discountOptions.length) {
-                    const discountHint = document.createElement('span');
-                    discountHint.className = 'discounted';
-                    discountHint.textContent = `割引${product.discountOptions.length}件あり`;
-                    price.append(' ', discountHint);
+                if (option) {
+                    const tag = document.createElement('span');
+                    tag.className = 'product-discount-tag';
+                    tag.textContent = option.name;
+                    const originalPrice = document.createElement('span');
+                    originalPrice.className = 'regular-price';
+                    originalPrice.textContent = '¥' + product.price.toLocaleString();
+                    const salePrice = document.createElement('span');
+                    salePrice.className = 'discounted';
+                    salePrice.textContent = '¥' + unitPrice.toLocaleString();
+                    price.append(originalPrice, salePrice);
+                    button.append(category, tag, name, price);
+                } else {
+                    price.textContent = '¥' + unitPrice.toLocaleString();
+                    button.append(category, name, price);
                 }
-                button.append(category, name, price);
                 if (cartQuantity) {
                     const badge = document.createElement('span');
                     badge.className = 'quantity-badge';
@@ -381,8 +398,9 @@
                 } else {
                     button.setAttribute('aria-label', accessibleLabel);
                 }
-                button.addEventListener('click', () => addProductToCart(product.id));
+                button.addEventListener('click', () => addProductToCart(product.id, option?.id ?? null));
                 productGrid.appendChild(button);
+                });
             });
         }
         
@@ -513,7 +531,7 @@
         window.deleteReceipt = (date) => { if (confirm('本当にこのレシートを削除しますか？')) { state.receipts = state.receipts.filter(r => r.date !== date); saveData(); showToast('レシートを削除しました'); render(); } }
         window.editReceipt = (date) => { const receipt = state.receipts.find(r => r.date === date); if (!receipt) return; state.editMode = { active: true, receiptDate: date }; state.cart = receipt.items.map(item => ({ ...snapshotReceiptItem(item), lineId: item.lineId || newCartLineId() })); state.activeView = '販売'; render(); }
         function cancelEditReceipt() { state.editMode = { active: false, receiptDate: null }; state.cart = []; }
-        function addProductToCart(productId) { const product = findProductById(productId); if (!product) return; const item = state.cart.find(cartItem => cartItem.id == productId && !cartItem.discountOptionId); if (item) item.quantity++; else state.cart.push({ lineId: newCartLineId(), id: product.id, quantity: 1, name: product.name, baseUnitPrice: product.price, unitPrice: product.price, discountAmount: 0, discountName: '', discountOptionId: null, cost: product.cost }); renderCart(); renderProductsGrid(); }
+        function addProductToCart(productId, discountOptionId = null) { const product = findProductById(productId); if (!product) return; const option = discountOptionId == null ? null : product.discountOptions.find(candidate => String(candidate.id) === String(discountOptionId)); if (discountOptionId != null && !option) return; const item = state.cart.find(cartItem => cartItem.id == productId && String(cartItem.discountOptionId || '') === String(option?.id || '')); if (item) item.quantity++; else { const discountAmount = option ? Number(option.amount) : 0; state.cart.push({ lineId: newCartLineId(), id: product.id, quantity: 1, name: product.name, baseUnitPrice: product.price, unitPrice: product.price - discountAmount, discountAmount, discountName: option?.name || '', discountOptionId: option?.id ?? null, cost: product.cost }); } renderCart(); renderProductsGrid(); }
         function updateCartQuantity(lineId, change) { const item = state.cart.find(cartItem => cartItem.lineId === lineId); if (item) { item.quantity += change; if (item.quantity <= 0) state.cart = state.cart.filter(cartItem => cartItem.lineId !== lineId); } renderCart(); renderProductsGrid(); }
         function applyCartDiscount(lineId, optionId) { const item = state.cart.find(cartItem => cartItem.lineId === lineId); const product = item && findProductById(item.id); if (!item || !product) return; const option = product.discountOptions.find(candidate => String(candidate.id) === String(optionId)); const baseUnitPrice = item.baseUnitPrice ?? product.price; if (option && option.amount >= baseUnitPrice) { showToast('割引額が通常価格以上です。商品設定を確認してください。', 'error'); renderCart(); return; } item.baseUnitPrice = baseUnitPrice; item.discountOptionId = option ? option.id : null; item.discountName = option ? option.name : ''; item.discountAmount = option ? option.amount : 0; item.unitPrice = item.baseUnitPrice - item.discountAmount; item.name = item.name || product.name; item.cost = item.cost ?? product.cost; saveData(); renderCart(); renderProductsGrid(); }
         function addCartButtonEvents() {
@@ -547,4 +565,3 @@
     </script>
 </body>
 </html>
-

@@ -25,13 +25,12 @@
         .category-filters { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 18px; padding: 2px 0 6px; }
         .category-chip { flex: 0 0 auto; border: 1px solid #d7dfeb; border-radius: 999px; padding: 9px 16px; background: white; color: #42546a; font-weight: 700; cursor: pointer; }
         .category-chip.active { background: #2878d0; border-color: #2878d0; color: white; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--product-item-size), 240px), 1fr)); gap: 14px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--product-item-size), 1fr)); gap: 14px; }
         .grid-separator { grid-column: 1 / -1; font-weight: bold; color: #2980b9; margin-top: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; font-size: 1.2em; }
         .product-item { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 130px; border: 1px solid #dce4ee; border-radius: 12px; text-align: center; cursor: pointer; background-color: white; box-shadow: 0 2px 5px rgba(20,40,70,0.05); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; padding: 16px 12px; }
         .product-item:hover { border-color: #85b5ec; box-shadow: 0 5px 14px rgba(40,120,208,0.12); transform: translateY(-1px); }
         .product-item:focus-visible { outline: 3px solid #85b5ec; outline-offset: 2px; }
         .product-item { width: 100%; font: inherit; color: #26384a; }
-        #clear-btn { padding: 10px; background: transparent; color: #718096; box-shadow: none; font-size: 0.85em; }
         .product-item .name { font-weight: 600; font-size: var(--product-item-font-size); margin-bottom: 8px; }
         .product-item .price { font-size: calc(var(--product-item-font-size) * 0.95); }
         .product-item .price .discounted { font-weight: bold; font-size: calc(var(--product-item-font-size) * 1.1); color: #e74c3c; }
@@ -52,7 +51,7 @@
         .action-buttons button:active { transform: scale(0.97); }
         #register-btn { background-color: #27ae60; box-shadow: 0 4px 12px rgba(39,174,96,0.35); letter-spacing: 0.05em; }
         #register-btn.update { background-color: #e67e22; box-shadow: 0 4px 12px rgba(230,126,34,0.35); }
-        #clear-btn { background-color: #95a5a6; }
+        #clear-btn { background-color: transparent; color: #718096; box-shadow: none; font-size: 0.85em; padding: 10px; }
         
         .cart-item { display: flex; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background-color: #f8f9fa; border: 1px solid #e9ecef; }
         .cart-item-info { flex-grow: 1; }
@@ -317,6 +316,8 @@
             }
             products.forEach(product => {
                 const cartItem = state.cart.find(item => item.id === product.id);
+                const finalPrice = product.price - product.discountAmount;
+                const accessibleLabel = product.name + '、' + (product.discountAmount > 0 ? '割引後' : '') + finalPrice.toLocaleString() + '円';
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'product-item';
@@ -339,9 +340,9 @@
                     badge.className = 'quantity-badge';
                     badge.textContent = cartItem.quantity;
                     button.appendChild(badge);
-                    button.setAttribute('aria-label', product.name + '、' + product.price.toLocaleString() + '円、カートに' + cartItem.quantity + '点');
+                    button.setAttribute('aria-label', accessibleLabel + '、カートに' + cartItem.quantity + '点');
                 } else {
-                    button.setAttribute('aria-label', product.name + '、' + product.price.toLocaleString() + '円');
+                    button.setAttribute('aria-label', accessibleLabel);
                 }
                 button.addEventListener('click', () => addProductToCart(product.id));
                 productGrid.appendChild(button);

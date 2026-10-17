@@ -18,15 +18,29 @@
         .center-pane { flex-grow: 1; padding: 25px; overflow-y: auto; }
         .right-pane { flex: 0 0 380px; background-color: #ffffff; border-left: 1px solid #ddd; display: flex; flex-direction: column; }
         
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--product-item-size), 1fr)); gap: 20px; }
+        .sales-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 18px; }
+        .sales-heading h1 { margin: 0; font-size: 1.8em; color: #24364b; }
+        .sales-heading p { margin: 0; color: #718096; }
+        .product-search { width: 100%; box-sizing: border-box; padding: 14px 16px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 10px; background: white; font-size: 1em; }
+        .category-filters { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 18px; padding: 2px 0 6px; }
+        .category-chip { flex: 0 0 auto; border: 1px solid #d7dfeb; border-radius: 999px; padding: 9px 16px; background: white; color: #42546a; font-weight: 700; cursor: pointer; }
+        .category-chip.active { background: #2878d0; border-color: #2878d0; color: white; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--product-item-size), 240px), 1fr)); gap: 14px; }
         .grid-separator { grid-column: 1 / -1; font-weight: bold; color: #2980b9; margin-top: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; font-size: 1.2em; }
-        .product-item { position: relative; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; background-color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; padding: 12px; }
+        .product-item { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 130px; border: 1px solid #dce4ee; border-radius: 12px; text-align: center; cursor: pointer; background-color: white; box-shadow: 0 2px 5px rgba(20,40,70,0.05); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; padding: 16px 12px; }
+        .product-item:hover { border-color: #85b5ec; box-shadow: 0 5px 14px rgba(40,120,208,0.12); transform: translateY(-1px); }
+        .product-item:focus-visible { outline: 3px solid #85b5ec; outline-offset: 2px; }
+        .product-item { width: 100%; font: inherit; color: #26384a; }
+        #clear-btn { padding: 10px; background: transparent; color: #718096; box-shadow: none; font-size: 0.85em; }
         .product-item .name { font-weight: 600; font-size: var(--product-item-font-size); margin-bottom: 8px; }
         .product-item .price { font-size: calc(var(--product-item-font-size) * 0.95); }
         .product-item .price .discounted { font-weight: bold; font-size: calc(var(--product-item-font-size) * 1.1); color: #e74c3c; }
+        .product-category-label { color: #718096; font-size: 0.82em; margin-bottom: 8px; }
+        .empty-products { grid-column: 1 / -1; padding: 40px 16px; color: #718096; text-align: center; background: #fff; border: 1px dashed #cbd5e1; border-radius: 12px; }
         .quantity-badge { position: absolute; top: -10px; right: -10px; background-color: #e74c3c; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .cart-header { padding: 18px; font-size: 1.3em; font-weight: bold; border-bottom: 1px solid #eee; }
+        .cart-header small { display: block; margin-top: 5px; font-size: 0.68em; font-weight: 400; color: #718096; }
         .cart-header.editing { background-color: #e67e22; color: white; }
         .cart-items { flex-grow: 1; padding: 15px; overflow-y: auto; }
         .cart-footer { padding: 25px; border-top: 1px solid #eee; background-color: #fdfdfd; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
@@ -88,7 +102,8 @@
         
         .form-section { background: #fff; padding: 25px; border-radius: 10px; margin-top: 25px; border: 1px solid #e0e0e0; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-grid input { font-size: 16px; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+        .data-note { padding: 12px 14px; background: #fff7e6; border-left: 4px solid #e6a23c; color: #72531b; }
+        .form-grid input, .form-grid select { font-size: 16px; padding: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
 
         .setting-item { margin-bottom: 25px; }
         .setting-item label { display: block; font-size: 1.1em; margin-bottom: 10px; }
@@ -203,15 +218,17 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         let state = {
-            products: [], cart: [], receipts: [], activeView: '販売操作',
+            products: [], cart: [], receipts: [], activeView: '販売操作', productQuery: '', activeCategory: 'すべて',
             editMode: { active: false, receiptDate: null },
             settings: { productItemSize: 250, productItemFontSize: 18 }
         };
 
         function saveData() { localStorage.setItem('posData', JSON.stringify({ products: state.products, receipts: state.receipts, settings: state.settings })); }
-        function loadData() { const data = JSON.parse(localStorage.getItem('posData')); const defaultSettings = { productItemSize: 250, productItemFontSize: 18 }; if (data) { state.products = data.products || getDefaultProducts(); state.receipts = data.receipts || []; state.settings = data.settings || defaultSettings; if (!state.settings.productItemFontSize) { state.settings.productItemFontSize = defaultSettings.productItemFontSize; } } else { state.products = getDefaultProducts(); } applySettings(); }
+        function loadData() { const data = JSON.parse(localStorage.getItem('posData')); const defaultSettings = { productItemSize: 250, productItemFontSize: 18 }; if (data) { state.products = data.products || getDefaultProducts(); state.receipts = data.receipts || []; state.settings = data.settings || defaultSettings; if (!state.settings.productItemFontSize) state.settings.productItemFontSize = defaultSettings.productItemFontSize; if (!state.receipts.length && isLegacyDefaultProducts(state.products)) { state.products = getDefaultProducts(); saveData(); } } else { state.products = getDefaultProducts(); } applySettings(); }
         function applySettings() { document.documentElement.style.setProperty('--product-item-size', `${state.settings.productItemSize}px`); document.documentElement.style.setProperty('--product-item-font-size', `${state.settings.productItemFontSize}px`); }
-        function getDefaultProducts() { return [{id:1,name:"Tシャツ",price:2500,cost:1000,discountAmount:0},{id:2,name:"トートバッグ",price:1800,cost:700,discountAmount:300},{id:3,name:"ステッカー",price:800,cost:200,discountAmount:0},{id:4,name:"キーホルダー",price:600,cost:150,discountAmount:0}]; }
+        function getDefaultProducts() { return [{id:1,name:"栗タルト",price:500,cost:0,discountAmount:0,category:"お菓子"},{id:2,name:"月ノ井",price:300,cost:0,discountAmount:0,category:"日本酒"},{id:3,name:"花の井",price:300,cost:0,discountAmount:0,category:"日本酒"},{id:4,name:"ステラ",price:300,cost:0,discountAmount:0,category:"日本酒"},{id:5,name:"わたり船",price:300,cost:0,discountAmount:0,category:"日本酒"},{id:6,name:"森島",price:300,cost:0,discountAmount:0,category:"日本酒"},{id:7,name:"一品",price:300,cost:0,discountAmount:0,category:"日本酒"},{id:8,name:"来福",price:300,cost:0,discountAmount:0,category:"日本酒"}]; }
+        function isLegacyDefaultProducts(products) { const legacy = [{id:1,name:"Tシャツ",price:2500,cost:1000,discountAmount:0},{id:2,name:"トートバッグ",price:1800,cost:700,discountAmount:300},{id:3,name:"ステッカー",price:800,cost:200,discountAmount:0},{id:4,name:"キーホルダー",price:600,cost:150,discountAmount:0}]; return Array.isArray(products) && products.length === legacy.length && legacy.every((product,index) => Object.keys(product).every(key => products[index][key] === product[key])); }
+        function getProductCategory(product) { return product.category || 'その他'; }
 
         const container = document.querySelector('.container');
         const leftPane = document.getElementById('left-pane');
@@ -247,8 +264,89 @@
             document.querySelectorAll('#main-menu li').forEach(item => item.addEventListener('click', handleMenuClick));
         }
         
-        function renderSalesView() { const isEditing = state.editMode.active; const headerClass = isEditing ? 'cart-header editing' : 'cart-header'; const headerText = isEditing ? `レシート編集中` : '現在の会計'; const registerBtnClass = isEditing ? 'update' : ''; const registerBtnText = isEditing ? '更新' : '登録'; const clearBtnText = isEditing ? '編集中止' : 'クリア'; centerPane.innerHTML = '<div class="product-grid"></div>'; rightPane.innerHTML = `<div class="${headerClass}">${headerText}</div><div class="cart-items"></div><div class="cart-footer"><div class="total-section"><span class="label">合計</span><span class="amount" id="total-amount">¥0</span></div><div class="action-buttons"><button id="register-btn" class="${registerBtnClass}">${registerBtnText}</button><button id="clear-btn">${clearBtnText}</button></div></div>`; renderProductsGrid(); renderCart(); document.getElementById('clear-btn').addEventListener('click', isEditing ? cancelEditReceipt : clearCart); document.getElementById('register-btn').addEventListener('click', registerSaleOrUpdateReceipt); }
-        function renderProductsGrid() { const productGrid = centerPane.querySelector('.product-grid'); if (!productGrid) return; productGrid.innerHTML = ''; const normalProducts = state.products.filter(p => p.discountAmount === 0); const discountedProducts = state.products.filter(p => p.discountAmount > 0); const createItemHtml = p => { const cartItem = state.cart.find(item => item.id === p.id); const quantityBadge = cartItem ? `<div class="quantity-badge">${cartItem.quantity}</div>` : ''; let priceHtml = p.discountAmount > 0 ? `<div class="price"><s>¥${p.price.toLocaleString()}</s> <span class="discounted">¥${(p.price - p.discountAmount).toLocaleString()}</span></div>` : `<div class="price">¥${p.price.toLocaleString()}</div>`; const item = document.createElement('div'); item.className = 'product-item'; item.innerHTML = `${quantityBadge}<div class="name">${p.name}</div>${priceHtml}`; item.addEventListener('click', () => addProductToCart(p.id)); productGrid.appendChild(item); }; normalProducts.forEach(createItemHtml); if (discountedProducts.length > 0) { const separator = document.createElement('div'); separator.className = 'grid-separator'; separator.textContent = '割引商品'; productGrid.appendChild(separator); discountedProducts.forEach(createItemHtml); } }
+        function renderSalesView() {
+            const isEditing = state.editMode.active;
+            const headerText = isEditing ? 'レシート編集中' : '今回のお会計';
+            const registerBtnText = isEditing ? '更新' : '会計へ';
+            const clearBtnText = isEditing ? '編集中止' : '商品をすべて削除';
+            centerPane.innerHTML = "<div class='sales-heading'><h1>販売</h1><p>商品を選んで会計へ</p></div><input class='product-search' id='product-search' type='search' placeholder='商品を検索' aria-label='商品を検索'><div class='category-filters' id='category-filters'></div><div class='product-grid'></div>";
+            rightPane.innerHTML = "<div class='cart-header'>" + headerText + "<small>選んだ商品を確認してください</small></div><div class='cart-items'></div><div class='cart-footer'><div class='total-section'><span class='label'>合計</span><span class='amount' id='total-amount'>¥0</span></div><div class='action-buttons'><button id='register-btn'></button><button id='clear-btn'></button></div></div>";
+            if (isEditing) rightPane.querySelector('.cart-header').classList.add('editing');
+            document.getElementById('product-search').value = state.productQuery;
+            document.getElementById('register-btn').textContent = registerBtnText;
+            document.getElementById('register-btn').classList.toggle('update', isEditing);
+            document.getElementById('clear-btn').textContent = clearBtnText;
+            document.getElementById('product-search').addEventListener('input', event => { state.productQuery = event.target.value; renderProductsGrid(); });
+            renderCategoryFilters();
+            renderProductsGrid();
+            renderCart();
+            document.getElementById('clear-btn').addEventListener('click', isEditing ? cancelEditReceipt : clearCart);
+            document.getElementById('register-btn').addEventListener('click', registerSaleOrUpdateReceipt);
+        }
+        function renderCategoryFilters() {
+            const filters = document.getElementById('category-filters');
+            if (!filters) return;
+            const categories = ['すべて', ...new Set(state.products.map(getProductCategory))];
+            if (!categories.includes(state.activeCategory)) state.activeCategory = 'すべて';
+            filters.innerHTML = '';
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'category-chip' + (state.activeCategory === category ? ' active' : '');
+                button.textContent = category;
+                button.setAttribute('aria-pressed', String(state.activeCategory === category));
+                button.addEventListener('click', () => { state.activeCategory = category; renderCategoryFilters(); renderProductsGrid(); });
+                filters.appendChild(button);
+            });
+        }
+        function renderProductsGrid() {
+            const productGrid = centerPane.querySelector('.product-grid');
+            if (!productGrid) return;
+            productGrid.innerHTML = '';
+            const query = state.productQuery.trim().toLocaleLowerCase('ja-JP');
+            const products = state.products.filter(product =>
+                (state.activeCategory === 'すべて' || getProductCategory(product) === state.activeCategory) &&
+                (!query || product.name.toLocaleLowerCase('ja-JP').includes(query))
+            );
+            if (!products.length) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-products';
+                empty.textContent = '商品が見つかりません。検索条件を変えてください。';
+                productGrid.appendChild(empty);
+                return;
+            }
+            products.forEach(product => {
+                const cartItem = state.cart.find(item => item.id === product.id);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'product-item';
+                const category = document.createElement('span');
+                category.className = 'product-category-label';
+                category.textContent = getProductCategory(product);
+                const name = document.createElement('span');
+                name.className = 'name';
+                name.textContent = product.name;
+                const price = document.createElement('span');
+                price.className = 'price';
+                if (product.discountAmount > 0) {
+                    price.innerHTML = '<s>¥' + product.price.toLocaleString() + '</s> <span class="discounted">¥' + (product.price - product.discountAmount).toLocaleString() + '</span>';
+                } else {
+                    price.textContent = '¥' + product.price.toLocaleString();
+                }
+                button.append(category, name, price);
+                if (cartItem) {
+                    const badge = document.createElement('span');
+                    badge.className = 'quantity-badge';
+                    badge.textContent = cartItem.quantity;
+                    button.appendChild(badge);
+                    button.setAttribute('aria-label', product.name + '、' + product.price.toLocaleString() + '円、カートに' + cartItem.quantity + '点');
+                } else {
+                    button.setAttribute('aria-label', product.name + '、' + product.price.toLocaleString() + '円');
+                }
+                button.addEventListener('click', () => addProductToCart(product.id));
+                productGrid.appendChild(button);
+            });
+        }
         
         function renderCart() {
             const cartItemsContainer = rightPane.querySelector('.cart-items'); if (!cartItemsContainer) return;
@@ -269,12 +367,12 @@
         function exportCSV() { if (state.receipts.length === 0) { showToast('エクスポートするデータがありません', 'error'); return; } const rows = [['レシートID','日時','商品名','数量','単価','割引額','小計']]; state.receipts.forEach(r => { const dateStr = new Date(r.date).toLocaleString('ja-JP'); r.items.forEach(item => { const p = findProductById(item.id); const name = p ? p.name : '削除済商品'; const price = p ? p.price : 0; const discount = p ? p.discountAmount : 0; const subtotal = (price - discount) * item.quantity; rows.push([r.id, dateStr, name, item.quantity, price, discount, subtotal]); }); }); const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n'); const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `売上_${new Date().toLocaleDateString('ja-JP').replace(/\//g,'-')}.csv`; a.click(); URL.revokeObjectURL(a.href); showToast('CSVをダウンロードしました'); }
         function renderSummaryView() { let totalRevenue = 0, totalCost = 0; const salesSummary = {}; state.receipts.forEach(receipt => { receipt.items.forEach(item => { const product = findProductById(item.id); if (!product) return; if (!salesSummary[item.id]) salesSummary[item.id] = { name: product.name, quantity: 0, revenue: 0, cost: 0, profit: 0 }; const revenue = (product.price - product.discountAmount) * item.quantity; const cost = product.cost * item.quantity; salesSummary[item.id].quantity += item.quantity; salesSummary[item.id].revenue += revenue; salesSummary[item.id].cost += cost; salesSummary[item.id].profit += (revenue - cost); totalRevenue += revenue; totalCost += cost; }); }); const tableRows = Object.values(salesSummary).map(s => `<tr><td>${s.name}</td><td>${s.quantity}</td><td>¥${Math.floor(s.revenue).toLocaleString()}</td><td>¥${Math.floor(s.cost).toLocaleString()}</td><td>¥${Math.floor(s.profit).toLocaleString()}</td></tr>`).join(''); centerPane.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h1 style="margin:0;">集計</h1><button onclick="exportCSV()" style="padding:10px 18px;background:#2980b9;color:white;border:none;border-radius:8px;font-size:1em;cursor:pointer;font-weight:600;">📥 CSVダウンロード</button></div><div class="summary-cards-container"><div class="summary-card revenue"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-9h4v2h-4zm-2-4h8v2H8zm2 8h4v2h-4z"></path></svg><h3>総売上</h3></div><p class="amount">¥${Math.floor(totalRevenue).toLocaleString()}</p></div><div class="summary-card cost"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M17.56 12.31a8.45 8.45 0 0 0-1.2-1.2l-4.24-4.24a1 1 0 0 0-1.42 0L6.46 11.11a8.45 8.45 0 0 0-1.2 1.2A8.5 8.5 0 0 0 12 21a8.5 8.5 0 0 0 5.56-8.69zM12 19c-3.86 0-7-3.14-7-7a6.45 6.45 0 0 1 .91-3.32L12 14.83l6.09-6.15A6.45 6.45 0 0 1 19 12c0 3.86-3.14 7-7 7z"></path></svg><h3>総原価</h3></div><p class="amount">¥${Math.floor(totalCost).toLocaleString()}</p></div><div class="summary-card profit"><div class="summary-card-header"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-12h2v4h4v2h-4v4h-2v-4H7v-2h4z"></path></svg><h3>総利益</h3></div><p class="amount">¥${Math.floor(totalRevenue - totalCost).toLocaleString()}</p></div></div><h2>商品別 詳細</h2><table><thead><tr><th>商品名</th><th>販売数</th><th class="th-revenue">売上</th><th class="th-cost">合計原価</th><th class="th-profit">利益</th></tr></thead><tbody>${tableRows}</tbody></table>`; window.exportCSV = exportCSV; }
         function renderReceiptsView() { const receiptListHtml = state.receipts.map((receipt) => { const itemsHtml = receipt.items.map(item => { const p = findProductById(item.id); return `<li>${p ? p.name : '削除済商品'} x ${item.quantity}</li>`; }).join(''); return `<div class="receipt-card"><div class="receipt-card-header"><h4>レシート #${receipt.id}</h4><span>${new Date(receipt.date).toLocaleString()}</span></div><p class="total">¥${receipt.total.toLocaleString()}</p><ul>${itemsHtml}</ul><div class="receipt-card-footer"><button class="action-btn btn-edit" onclick="editReceipt('${receipt.date}')">編集</button><button class="action-btn btn-delete" onclick="deleteReceipt('${receipt.date}')">削除</button></div></div>`; }).join(''); centerPane.innerHTML = `<h1>レシート履歴</h1><div class="receipt-grid">${receiptListHtml || '<p>まだ会計履歴はありません。</p>'}</div>`; }
-        function renderProductsSettingsView() { let productsHtml = ''; state.products.forEach(p => { const isSold = isProductSold(p.id); productsHtml += `<tr draggable="${!isSold}" data-id="${p.id}"><td>${p.name} ${isSold ? '🔒' : ''}</td><td>¥${p.price.toLocaleString()}</td><td>¥${p.cost.toLocaleString()}</td><td>¥${p.discountAmount.toLocaleString()}</td><td><button class="action-btn btn-edit" onclick="editProduct(${p.id})" ${isSold ? 'disabled' : ''}>編集</button><button class="action-btn btn-delete" onclick="deleteProduct(${p.id})" ${isSold ? 'disabled' : ''}>削除</button></td></tr>`; }); centerPane.innerHTML = `<h1>商品一覧設定</h1><p>販売履歴のない商品はドラッグ＆ドロップで並び替えできます。</p><table id="products-table"><thead><tr><th>名前</th><th>価格</th><th>原価</th><th>割引額</th><th>操作</th></tr></thead><tbody>${productsHtml}</tbody></table><div class="form-section"><h3 id="product-form-title">新規商品追加</h3><form id="product-form"><input type="hidden" id="product-id"><div class="form-grid"><input type="text" id="product-name" placeholder="商品名" required><input type="number" id="product-price" placeholder="価格" required><input type="number" id="product-cost" placeholder="原価" required><input type="number" id="product-discount-amount" placeholder="割引額 (なければ0)" required></div><button type="submit" style="width:100%; padding:15px; margin-top:15px; background:#2980b9; color:white; border:none; border-radius:8px; font-size:1.1em;">保存</button></form></div>`; document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit); const tableBody = document.querySelector('#products-table tbody'); let draggedItemId = null; tableBody.addEventListener('dragstart', e => { draggedItemId = e.target.dataset.id; e.target.classList.add('dragging'); }); tableBody.addEventListener('dragend', e => e.target.classList.remove('dragging')); tableBody.addEventListener('dragover', e => { e.preventDefault(); const targetRow = e.target.closest('tr'); if (targetRow && targetRow.dataset.id !== draggedItemId && !isProductSold(targetRow.dataset.id)) { document.querySelectorAll('#products-table tr').forEach(row => row.classList.remove('drag-over')); targetRow.classList.add('drag-over'); } }); tableBody.addEventListener('dragleave', e => e.target.closest('tr')?.classList.remove('drag-over')); tableBody.addEventListener('drop', e => { e.preventDefault(); document.querySelectorAll('#products-table tr').forEach(row => row.classList.remove('drag-over')); const targetRow = e.target.closest('tr'); if (targetRow && !isProductSold(targetRow.dataset.id)) { const droppedOnItemId = targetRow.dataset.id; const draggedIndex = state.products.findIndex(p => p.id == draggedItemId); const droppedOnIndex = state.products.findIndex(p => p.id == droppedOnItemId); const [draggedItem] = state.products.splice(draggedIndex, 1); state.products.splice(droppedOnIndex, 0, draggedItem); saveData(); render(); } }); }
+        function renderProductsSettingsView() { let productsHtml = ''; state.products.forEach(p => { const isSold = isProductSold(p.id); productsHtml += `<tr draggable="${!isSold}" data-id="${p.id}"><td>${getProductCategory(p)}</td><td>${p.name} ${isSold ? '🔒' : ''}</td><td>¥${p.price.toLocaleString()}</td><td>¥${p.cost.toLocaleString()}</td><td>¥${p.discountAmount.toLocaleString()}</td><td><button class="action-btn btn-edit" onclick="editProduct(${p.id})" ${isSold ? 'disabled' : ''}>編集</button><button class="action-btn btn-delete" onclick="deleteProduct(${p.id})" ${isSold ? 'disabled' : ''}>削除</button></td></tr>`; }); centerPane.innerHTML = `<h1>商品一覧設定</h1><p>販売履歴のない商品はドラッグ＆ドロップで並び替えできます。</p><p class="data-note">初期商品の原価は0円で仮登録しています。集計を使う場合は、原価が分かった時点で変更してください。</p><table id="products-table"><thead><tr><th>カテゴリ</th><th>名前</th><th>価格</th><th>原価</th><th>割引額</th><th>操作</th></tr></thead><tbody>${productsHtml}</tbody></table><div class="form-section"><h3 id="product-form-title">新規商品追加</h3><form id="product-form"><input type="hidden" id="product-id"><div class="form-grid"><input type="text" id="product-name" placeholder="商品名" required><select id="product-category" aria-label="カテゴリ"><option value="お菓子">お菓子</option><option value="日本酒">日本酒</option><option value="その他">その他</option></select><input type="number" id="product-price" placeholder="価格" required><input type="number" id="product-cost" placeholder="原価" required><input type="number" id="product-discount-amount" placeholder="割引額 (なければ0)" required></div><button type="submit" style="width:100%; padding:15px; margin-top:15px; background:#2980b9; color:white; border:none; border-radius:8px; font-size:1.1em;">保存</button></form></div>`; document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit); const tableBody = document.querySelector('#products-table tbody'); let draggedItemId = null; tableBody.addEventListener('dragstart', e => { draggedItemId = e.target.dataset.id; e.target.classList.add('dragging'); }); tableBody.addEventListener('dragend', e => e.target.classList.remove('dragging')); tableBody.addEventListener('dragover', e => { e.preventDefault(); const targetRow = e.target.closest('tr'); if (targetRow && targetRow.dataset.id !== draggedItemId && !isProductSold(targetRow.dataset.id)) { document.querySelectorAll('#products-table tr').forEach(row => row.classList.remove('drag-over')); targetRow.classList.add('drag-over'); } }); tableBody.addEventListener('dragleave', e => e.target.closest('tr')?.classList.remove('drag-over')); tableBody.addEventListener('drop', e => { e.preventDefault(); document.querySelectorAll('#products-table tr').forEach(row => row.classList.remove('drag-over')); const targetRow = e.target.closest('tr'); if (targetRow && !isProductSold(targetRow.dataset.id)) { const droppedOnItemId = targetRow.dataset.id; const draggedIndex = state.products.findIndex(p => p.id == draggedItemId); const droppedOnIndex = state.products.findIndex(p => p.id == droppedOnItemId); const [draggedItem] = state.products.splice(draggedIndex, 1); state.products.splice(droppedOnIndex, 0, draggedItem); saveData(); render(); } }); }
         function renderSettingsView() { centerPane.innerHTML = `<h1>設定</h1><div class="setting-item"><label for="item-size-slider">販売アイテムのボタンサイズ: <span id="item-size-value">${state.settings.productItemSize}px</span></label><input type="range" id="item-size-slider" min="150" max="300" value="${state.settings.productItemSize}"></div><div class="setting-item"><label for="font-size-slider">アイテムの文字サイズ: <span id="font-size-value">${state.settings.productItemFontSize}px</span></label><input type="range" id="font-size-slider" min="12" max="28" value="${state.settings.productItemFontSize}"></div>`; const sizeSlider = document.getElementById('item-size-slider'); const sizeValueLabel = document.getElementById('item-size-value'); sizeSlider.addEventListener('input', (e) => { state.settings.productItemSize = e.target.value; sizeValueLabel.textContent = `${e.target.value}px`; applySettings(); }); sizeSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); }); const fontSlider = document.getElementById('font-size-slider'); const fontValueLabel = document.getElementById('font-size-value'); fontSlider.addEventListener('input', (e) => { state.settings.productItemFontSize = e.target.value; fontValueLabel.textContent = `${e.target.value}px`; applySettings(); }); fontSlider.addEventListener('change', () => { saveData(); showToast('設定を保存しました'); }); }
         
         function handleMenuClick(event) { if (state.editMode.active && !confirm("レシートの編集中です。変更を破棄して移動しますか？")) return; cancelEditReceipt(); state.activeView = event.currentTarget.textContent; render(); leftPane.classList.remove('menu-open'); }
-        function handleProductFormSubmit(e) { e.preventDefault(); const id = document.getElementById('product-id').value; const newProduct = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('product-name').value, price: parseInt(document.getElementById('product-price').value) || 0, cost: parseInt(document.getElementById('product-cost').value) || 0, discountAmount: parseInt(document.getElementById('product-discount-amount').value) || 0 }; if (id) { state.products = state.products.map(p => p.id == id ? {...p, ...newProduct} : p); } else { state.products.push(newProduct); } saveData(); showToast('商品を保存しました'); render(); }
-        window.editProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は編集できません。', 'error'); return; } const p = findProductById(id); if (!p) return; document.getElementById('product-form-title').textContent = '商品を編集'; document.getElementById('product-id').value = p.id; document.getElementById('product-name').value = p.name; document.getElementById('product-price').value = p.price; document.getElementById('product-cost').value = p.cost; document.getElementById('product-discount-amount').value = p.discountAmount; window.scrollTo(0, document.body.scrollHeight); }
+        function handleProductFormSubmit(e) { e.preventDefault(); const id = document.getElementById('product-id').value; const newProduct = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('product-name').value, price: parseInt(document.getElementById('product-price').value) || 0, cost: parseInt(document.getElementById('product-cost').value) || 0, discountAmount: parseInt(document.getElementById('product-discount-amount').value) || 0, category: document.getElementById('product-category').value }; if (id) { state.products = state.products.map(p => p.id == id ? {...p, ...newProduct} : p); } else { state.products.push(newProduct); } saveData(); showToast('商品を保存しました'); render(); }
+        window.editProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は編集できません。', 'error'); return; } const p = findProductById(id); if (!p) return; document.getElementById('product-form-title').textContent = '商品を編集'; document.getElementById('product-id').value = p.id; document.getElementById('product-category').value = p.category || 'その他'; document.getElementById('product-name').value = p.name; document.getElementById('product-price').value = p.price; document.getElementById('product-cost').value = p.cost; document.getElementById('product-discount-amount').value = p.discountAmount; window.scrollTo(0, document.body.scrollHeight); }
         window.deleteProduct = (id) => { if (isProductSold(id)) { showToast('販売履歴のある商品は削除できません。', 'error'); return; } if (confirm('本当にこの商品を削除しますか？')) { state.products = state.products.filter(p => p.id != id); saveData(); showToast('商品を削除しました'); render(); } }
         window.deleteReceipt = (date) => { if (confirm('本当にこのレシートを削除しますか？')) { state.receipts = state.receipts.filter(r => r.date !== date); saveData(); showToast('レシートを削除しました'); render(); } }
         window.editReceipt = (date) => { const receipt = state.receipts.find(r => r.date === date); if (!receipt) return; state.editMode = { active: true, receiptDate: date }; state.cart = JSON.parse(JSON.stringify(receipt.items)); state.activeView = '販売操作'; render(); }
